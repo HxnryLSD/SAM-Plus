@@ -102,7 +102,7 @@
             this._StoreButton.Name = "_StoreButton";
             this._StoreButton.Size = new System.Drawing.Size(120, 22);
             this._StoreButton.Text = "Commit Changes";
-            this._StoreButton.ToolTipText = "Store achievements and statistics for active game.";
+            this._StoreButton.ToolTipText = "Store achievements and statistics for active game (Ctrl+S)";
             this._StoreButton.Click += new System.EventHandler(this.OnStore);
             // 
             // _ReloadButton
@@ -113,7 +113,7 @@
             this._ReloadButton.Name = "_ReloadButton";
             this._ReloadButton.Size = new System.Drawing.Size(66, 22);
             this._ReloadButton.Text = "Refresh";
-            this._ReloadButton.ToolTipText = "Refresh achievements and statistics for active game.";
+            this._ReloadButton.ToolTipText = "Refresh achievements and statistics for active game (F5)";
             this._ReloadButton.Click += new System.EventHandler(this.OnRefresh);
             // 
             // _ResetButton
@@ -196,15 +196,16 @@
             // _AchievementListView
             // 
             this._AchievementListView.Activation = System.Windows.Forms.ItemActivation.OneClick;
-            this._AchievementListView.BackColor = System.Drawing.Color.Black;
+            this._AchievementListView.BackColor = System.Drawing.Color.FromArgb(33, 33, 33);
             this._AchievementListView.BackgroundImageTiled = true;
+            this._AchievementListView.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this._AchievementListView.CheckBoxes = true;
             this._AchievementListView.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] {
             this._AchievementNameColumnHeader,
             this._AchievementDescriptionColumnHeader,
             this._AchievementUnlockTimeColumnHeader});
             this._AchievementListView.Dock = System.Windows.Forms.DockStyle.Fill;
-            this._AchievementListView.ForeColor = System.Drawing.Color.White;
+            this._AchievementListView.ForeColor = System.Drawing.Color.FromArgb(243, 243, 243);
             this._AchievementListView.FullRowSelect = true;
             this._AchievementListView.GridLines = true;
             this._AchievementListView.HideSelection = false;
@@ -261,7 +262,7 @@
             this._LockAllButton.Name = "_LockAllButton";
             this._LockAllButton.Size = new System.Drawing.Size(23, 22);
             this._LockAllButton.Text = "Lock All";
-            this._LockAllButton.ToolTipText = "Lock all achievements.";
+            this._LockAllButton.ToolTipText = "Lock all achievements (Ctrl+L)";
             this._LockAllButton.Click += new System.EventHandler(this.OnLockAll);
             // 
             // _InvertAllButton
@@ -283,7 +284,7 @@
             this._UnlockAllButton.Name = "_UnlockAllButton";
             this._UnlockAllButton.Size = new System.Drawing.Size(23, 22);
             this._UnlockAllButton.Text = "Unlock All";
-            this._UnlockAllButton.ToolTipText = "Unlock all achievements.";
+            this._UnlockAllButton.ToolTipText = "Unlock all achievements (Ctrl+A)";
             this._UnlockAllButton.Click += new System.EventHandler(this.OnUnlockAll);
             // 
             // _DisplayLabel

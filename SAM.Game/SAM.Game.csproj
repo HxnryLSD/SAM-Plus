@@ -33,6 +33,10 @@
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <OutputPath>..\upload\</OutputPath>
     <UseVSHostingProcess>false</UseVSHostingProcess>
+    <!-- Performance: ReadyToRun AOT compilation for faster startup -->
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <TieredCompilation>true</TieredCompilation>
+    <TieredPGO>true</TieredPGO>
   </PropertyGroup>
   <ItemGroup>
     <Compile Update="DoubleBufferedListView.cs">
@@ -53,5 +57,8 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SAM.API\SAM.API.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="ReaLTaiizor" Version="3.8.1.5" />
   </ItemGroup>
 </Project>

@@ -13,9 +13,10 @@
         /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
         protected override void Dispose(bool disposing)
         {
-            if (disposing && (components != null))
+            if (disposing)
             {
-                components.Dispose();
+                System.Windows.Forms.Application.RemoveMessageFilter(this);
+                components?.Dispose();
             }
             base.Dispose(disposing);
         }
@@ -100,6 +101,7 @@
             this._RefreshGamesButton.Name = "_RefreshGamesButton";
             this._RefreshGamesButton.Size = new System.Drawing.Size(105, 22);
             this._RefreshGamesButton.Text = "Refresh Games";
+            this._RefreshGamesButton.ToolTipText = "Refresh game list (F5)";
             this._RefreshGamesButton.Click += new System.EventHandler(this.OnRefresh);
             //
             // _AddGameTextBox
@@ -180,9 +182,10 @@
             //
             // _GameListView
             //
-            this._GameListView.BackColor = System.Drawing.Color.Black;
+            this._GameListView.BackColor = System.Drawing.Color.FromArgb(33, 33, 33);
             this._GameListView.Dock = System.Windows.Forms.DockStyle.Fill;
-            this._GameListView.ForeColor = System.Drawing.Color.White;
+            this._GameListView.ForeColor = System.Drawing.Color.FromArgb(243, 243, 243);
+            this._GameListView.BorderStyle = System.Windows.Forms.BorderStyle.None;
             this._GameListView.HideSelection = false;
             this._GameListView.LargeImageList = this._LogoImageList;
             this._GameListView.Location = new System.Drawing.Point(0, 25);

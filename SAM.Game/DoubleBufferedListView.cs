@@ -20,15 +20,43 @@
  *    distribution.
  */
 
+using System;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace SAM.Game
 {
 	internal class DoubleBufferedListView : ListView
 	{
+		public event ScrollEventHandler Scroll;
+
 		public DoubleBufferedListView()
 		{
 			base.DoubleBuffered = true;
+		}
+
+		protected virtual void OnScroll(ScrollEventArgs e)
+		{
+			this.Scroll?.Invoke(this, e);
+		}
+
+		protected override void WndProc(ref Message m)
+		{
+			base.WndProc(ref m);
+
+			// WM_VSCROLL or WM_MOUSEWHEEL
+			if (m.Msg == 0x0115 || m.Msg == 0x020A)
+			{
+				this.OnScroll(new ScrollEventArgs(ScrollEventType.EndScroll, GetScrollPos()));
+			}
+		}
+
+		[DllImport("user32.dll")]
+		private static extern int GetScrollPos(IntPtr hWnd, int nBar);
+
+		private int GetScrollPos()
+		{
+			return GetScrollPos(this.Handle, 1); // SB_VERT = 1
 		}
 	}
 }

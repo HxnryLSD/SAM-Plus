@@ -23,12 +23,49 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
-using Microsoft.Win32;
+using ReaLTaiizor.Colors;
 
 namespace SAM.API
 {
     /// <summary>
-    /// Theme colors for the application.
+    /// Store Theme color palette based on ReaLTaiizor Store theme.
+    /// </summary>
+    public static class StoreThemeColors
+    {
+        // Primary colors
+        public static Color Background => Color.FromArgb(28, 28, 28);          // Main background
+        public static Color BackgroundLight => Color.FromArgb(38, 38, 38);     // Secondary background
+        public static Color BackgroundDark => Color.FromArgb(18, 18, 18);      // Darker areas
+        
+        // Text colors
+        public static Color Foreground => Color.FromArgb(243, 243, 243);       // Primary text
+        public static Color ForegroundDim => Color.FromArgb(180, 180, 180);    // Secondary text
+        public static Color ForegroundDisabled => Color.FromArgb(100, 100, 100); // Disabled text
+        
+        // Accent colors (Steam-like blue)
+        public static Color Accent => Color.FromArgb(66, 133, 244);            // Primary accent
+        public static Color AccentHover => Color.FromArgb(86, 153, 255);       // Hover state
+        public static Color AccentPressed => Color.FromArgb(46, 113, 224);     // Pressed state
+        
+        // Control colors
+        public static Color ControlBackground => Color.FromArgb(45, 45, 45);   // Button, TextBox background
+        public static Color ControlBorder => Color.FromArgb(70, 70, 70);       // Control borders
+        public static Color ControlBorderHover => Color.FromArgb(90, 90, 90);  // Border hover
+        
+        // Status colors
+        public static Color Success => Color.FromArgb(76, 175, 80);            // Green for unlocked
+        public static Color Warning => Color.FromArgb(255, 193, 7);            // Yellow for warning
+        public static Color Error => Color.FromArgb(244, 67, 54);              // Red for errors
+        
+        // List/Grid colors
+        public static Color ListBackground => Color.FromArgb(33, 33, 33);
+        public static Color ListAlternate => Color.FromArgb(40, 40, 40);
+        public static Color ListSelected => Color.FromArgb(66, 133, 244, 80);  // Semi-transparent accent
+        public static Color ListHover => Color.FromArgb(55, 55, 55);
+    }
+
+    /// <summary>
+    /// Theme colors for the application (Store Dark theme only).
     /// </summary>
     public class Theme
     {
@@ -41,84 +78,39 @@ namespace SAM.API
         public Color AccentColor { get; set; }
         public Color BorderColor { get; set; }
 
-        public static Theme Light => new()
-        {
-            BackColor = SystemColors.Control,
-            ForeColor = SystemColors.ControlText,
-            ControlBackColor = SystemColors.Window,
-            ControlForeColor = SystemColors.WindowText,
-            ListBackColor = SystemColors.Window,
-            ListForeColor = SystemColors.WindowText,
-            AccentColor = Color.FromArgb(0, 120, 215),
-            BorderColor = SystemColors.ControlDark
-        };
-
+        /// <summary>
+        /// Store Theme - Modern dark theme based on ReaLTaiizor Store design.
+        /// </summary>
         public static Theme Dark => new()
         {
-            BackColor = Color.FromArgb(32, 32, 32),
-            ForeColor = Color.FromArgb(240, 240, 240),
-            ControlBackColor = Color.FromArgb(45, 45, 45),
-            ControlForeColor = Color.FromArgb(240, 240, 240),
-            ListBackColor = Color.FromArgb(25, 25, 25),
-            ListForeColor = Color.FromArgb(240, 240, 240),
-            AccentColor = Color.FromArgb(0, 120, 215),
-            BorderColor = Color.FromArgb(60, 60, 60)
+            BackColor = StoreThemeColors.Background,
+            ForeColor = StoreThemeColors.Foreground,
+            ControlBackColor = StoreThemeColors.ControlBackground,
+            ControlForeColor = StoreThemeColors.Foreground,
+            ListBackColor = StoreThemeColors.ListBackground,
+            ListForeColor = StoreThemeColors.Foreground,
+            AccentColor = StoreThemeColors.Accent,
+            BorderColor = StoreThemeColors.ControlBorder
         };
     }
 
     /// <summary>
-    /// Manages application theming and dark mode support.
+    /// Manages application theming - fixed to Store dark theme.
     /// </summary>
     public static class ThemeManager
     {
-        private static bool _isDarkMode;
-        private static Theme _currentTheme;
+        private static readonly Theme _currentTheme = Theme.Dark;
 
-        public static event Action ThemeChanged;
+        public static bool IsDarkMode => true;
 
-        public static bool IsDarkMode
-        {
-            get => _isDarkMode;
-            set
-            {
-                if (_isDarkMode != value)
-                {
-                    _isDarkMode = value;
-                    _currentTheme = value ? Theme.Dark : Theme.Light;
-                    ThemeChanged?.Invoke();
-                    Logger.Info($"Theme changed to: {(value ? "Dark" : "Light")}");
-                }
-            }
-        }
-
-        public static Theme Current => _currentTheme ?? Theme.Light;
+        public static Theme Current => _currentTheme;
 
         /// <summary>
-        /// Initializes the theme based on Windows settings.
+        /// Initializes the theme (Store dark mode).
         /// </summary>
         public static void Initialize()
         {
-            _isDarkMode = IsWindowsDarkMode();
-            _currentTheme = _isDarkMode ? Theme.Dark : Theme.Light;
-            Logger.Info($"Theme initialized: {(_isDarkMode ? "Dark" : "Light")} mode");
-        }
-
-        /// <summary>
-        /// Detects if Windows is using dark mode.
-        /// </summary>
-        private static bool IsWindowsDarkMode()
-        {
-            try
-            {
-                using var key = Registry.CurrentUser.OpenSubKey(
-                    @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
-                var value = key?.GetValue("AppsUseLightTheme");
-                return value is int i && i == 0;
-            }
-            catch
-            {
-                return false;
-            }
+            Logger.Info("Theme initialized: Store Dark mode (ReaLTaiizor)");
         }
 
         /// <summary>
@@ -178,10 +170,12 @@ namespace SAM.API
                     break;
 
                 case Button btn:
-                    btn.BackColor = theme.ControlBackColor;
+                    btn.BackColor = StoreThemeColors.ControlBackground;
                     btn.ForeColor = theme.ControlForeColor;
                     btn.FlatStyle = FlatStyle.Flat;
-                    btn.FlatAppearance.BorderColor = theme.BorderColor;
+                    btn.FlatAppearance.BorderColor = StoreThemeColors.ControlBorder;
+                    btn.FlatAppearance.MouseOverBackColor = StoreThemeColors.ListHover;
+                    btn.FlatAppearance.MouseDownBackColor = StoreThemeColors.AccentPressed;
                     break;
 
                 case CheckBox chk:
@@ -235,14 +229,6 @@ namespace SAM.API
                     control.ForeColor = theme.ForeColor;
                     break;
             }
-        }
-
-        /// <summary>
-        /// Toggles between dark and light mode.
-        /// </summary>
-        public static void ToggleTheme()
-        {
-            IsDarkMode = !IsDarkMode;
         }
     }
 }
