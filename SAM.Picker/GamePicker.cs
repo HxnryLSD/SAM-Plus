@@ -29,7 +29,9 @@ using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Net;
+using System.Net; // Removed WebClient usage
+using System.Net.Http; // Added
+using System.Threading.Tasks; // Added
 using System.Windows.Forms;
 using System.Xml.XPath;
 using static SAM.Picker.InvariantShorthand;
@@ -39,6 +41,9 @@ namespace SAM.Picker
 {
     internal partial class GamePicker : Form
     {
+        private static readonly HttpClient _HttpClient = new(); // Added
+        private bool _isDownloadingLogos = false; // Added
+
         private readonly API.Client _SteamClient;
 
         private readonly Dictionary<uint, GameInfo> _Games;
@@ -96,52 +101,63 @@ namespace SAM.Picker
             this.DownloadNextLogo();
         }
 
-        private void DoDownloadList(object sender, DoWorkEventArgs e)
+        private void DoDownloadList() { } // obsolete
+        
+        private async void LoadGamesAsync()
         {
             this._PickerStatusLabel.Text = "Downloading game list...";
 
-            byte[] bytes;
-            using (WebClient downloader = new())
+            try 
             {
-                bytes = downloader.DownloadData(new Uri("https://gib.me/sam/games.xml"));
-            }
-
-            List<KeyValuePair<uint, string>> pairs = new();
-            using (MemoryStream stream = new(bytes, false))
-            {
-                XPathDocument document = new(stream);
-                var navigator = document.CreateNavigator();
-                var nodes = navigator.Select("/games/game");
-                while (nodes.MoveNext() == true)
+                var bytes = await _HttpClient.GetByteArrayAsync("https://gib.me/sam/games.xml");
+                
+                List<KeyValuePair<uint, string>> pairs = new();
+                using (MemoryStream stream = new(bytes, false))
                 {
-                    string type = nodes.Current.GetAttribute("type", "");
-                    if (string.IsNullOrEmpty(type) == true)
+                    XPathDocument document = new(stream);
+                    var navigator = document.CreateNavigator();
+                    var nodes = navigator.Select("/games/game");
+                    while (nodes.MoveNext() == true)
                     {
-                        type = "normal";
+                        string type = nodes.Current.GetAttribute("type", "");
+                        if (string.IsNullOrEmpty(type) == true)
+                        {
+                            type = "normal";
+                        }
+                        pairs.Add(new((uint)nodes.Current.ValueAsLong, type));
                     }
-                    pairs.Add(new((uint)nodes.Current.ValueAsLong, type));
+                }
+
+                this._PickerStatusLabel.Text = "Checking game ownership...";
+                foreach (var kv in pairs)
+                {
+                    this.AddGame(kv.Key, kv.Value);
                 }
             }
-
-            this._PickerStatusLabel.Text = "Checking game ownership...";
-            foreach (var kv in pairs)
-            {
-                this.AddGame(kv.Key, kv.Value);
-            }
-        }
-
-        private void OnDownloadList(object sender, RunWorkerCompletedEventArgs e)
-        {
-            if (e.Error != null || e.Cancelled == true)
+            catch (Exception e)
             {
                 this.AddDefaultGames();
-                MessageBox.Show(e.Error.ToString(), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(e.ToString(), "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
-
+            
             this.RefreshGames();
             this._RefreshGamesButton.Enabled = true;
             this.DownloadNextLogo();
         }
+
+        /*
+        private void DoDownloadList(object sender, DoWorkEventArgs e)
+        {
+           // Removed
+        }
+        */
+
+        /*
+        private void OnDownloadList(object sender, RunWorkerCompletedEventArgs e)
+        {
+           // Removed
+        }
+        */
 
         private void RefreshGames()
         {
@@ -249,89 +265,90 @@ namespace SAM.Picker
             e.Index = index < 0 ? -1 : index;
         }
 
+        /*
         private void DoDownloadLogo(object sender, DoWorkEventArgs e)
         {
-            var info = (GameInfo)e.Argument;
-
-            this._LogosAttempted.Add(info.ImageUrl);
-
-            using (WebClient downloader = new())
-            {
-                try
-                {
-                    var data = downloader.DownloadData(new Uri(info.ImageUrl));
-                    using (MemoryStream stream = new(data, false))
-                    {
-                        Bitmap bitmap = new(stream);
-                        e.Result = new LogoInfo(info.Id, bitmap);
-                    }
-                }
-                catch (Exception)
-                {
-                    e.Result = new LogoInfo(info.Id, null);
-                }
-            }
+             // Removed
         }
+        */
 
+        /*
         private void OnDownloadLogo(object sender, RunWorkerCompletedEventArgs e)
         {
-            if (e.Error != null || e.Cancelled == true)
-            {
-                return;
-            }
-
-            if (e.Result is LogoInfo logoInfo &&
-                logoInfo.Bitmap != null &&
-                this._Games.TryGetValue(logoInfo.Id, out var gameInfo) == true)
-            {
-                this._GameListView.BeginUpdate();
-                var imageIndex = this._LogoImageList.Images.Count;
-                this._LogoImageList.Images.Add(gameInfo.ImageUrl, logoInfo.Bitmap);
-                gameInfo.ImageIndex = imageIndex;
-                this._GameListView.EndUpdate();
-            }
-
-            this.DownloadNextLogo();
+            // Removed
         }
+        */
 
-        private void DownloadNextLogo()
+        private async void DownloadNextLogo()
         {
-            lock (this._LogoLock)
+            if (this._isDownloadingLogos) return;
+            this._isDownloadingLogos = true;
+
+            try 
             {
-
-                if (this._LogoWorker.IsBusy == true)
-                {
-                    return;
-                }
-
-                GameInfo info;
                 while (true)
                 {
-                    if (this._LogoQueue.TryDequeue(out info) == false)
+                    if (this.IsDisposed) return;
+
+                    GameInfo info = null;
+                    
+                    // Logic to find next item
+                    // We can reuse the loop logic but instead of RunWorkerAsync, we process it.
+                    
+                    while (true)
                     {
-                        this._DownloadStatusLabel.Visible = false;
-                        return;
+                        if (this._LogoQueue.TryDequeue(out info) == false)
+                        {
+                            // Queue empty
+                            this._DownloadStatusLabel.Visible = false;
+                            return;
+                        }
+
+                        if (info.Item == null) continue;
+
+                        if (this._FilteredGames.Contains(info) == false ||
+                            info.Item.Bounds.IntersectsWith(this._GameListView.ClientRectangle) == false)
+                        {
+                            this._LogosAttempting.Remove(info.ImageUrl);
+                            continue;
+                        }
+
+                        break; // Found one
                     }
 
-                    if (info.Item == null)
-                    {
-                        continue;
-                    }
+                    this._DownloadStatusLabel.Text = $"Downloading {1 + this._LogoQueue.Count} game icons...";
+                    this._DownloadStatusLabel.Visible = true;
 
-                    if (this._FilteredGames.Contains(info) == false ||
-                        info.Item.Bounds.IntersectsWith(this._GameListView.ClientRectangle) == false)
+                    // Download it
+                    try 
                     {
-                        this._LogosAttempting.Remove(info.ImageUrl);
-                        continue;
+                        this._LogosAttempted.Add(info.ImageUrl);
+                        var data = await _HttpClient.GetByteArrayAsync(info.ImageUrl);
+                        using (var stream = new MemoryStream(data))
+                        {
+                            var bitmap = new Bitmap(stream);
+                            
+                            if (this.IsDisposed) return;
+                            
+                            this._GameListView.BeginUpdate();
+                            var imageIndex = this._LogoImageList.Images.Count;
+                            this._LogoImageList.Images.Add(info.ImageUrl, bitmap);
+                            info.ImageIndex = imageIndex;
+                            this._GameListView.EndUpdate();
+                        }
                     }
-
-                    break;
+                    catch
+                    {
+                         // Failed
+                    }
+                    
+                    // Loop continues to next item
                 }
-
-                this._DownloadStatusLabel.Text = $"Downloading {1 + this._LogoQueue.Count} game icons...";
-                this._DownloadStatusLabel.Visible = true;
-
-                this._LogoWorker.RunWorkerAsync(info);
+            }
+            finally
+            {
+                this._isDownloadingLogos = false;
+                if (!IsDisposed) this._DownloadStatusLabel.Visible = false;
             }
         }
 
@@ -420,7 +437,8 @@ namespace SAM.Picker
         {
             this._Games.Clear();
             this._RefreshGamesButton.Enabled = false;
-            this._ListWorker.RunWorkerAsync();
+            //this._ListWorker.RunWorkerAsync();
+            this.LoadGamesAsync();
         }
 
         private void AddDefaultGames()

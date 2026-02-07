@@ -1,20 +1,55 @@
-# Steam Achievement Manager
+# Steam Achievement Manager (SAM-Plus)
 
-Steam Achievement Manager (SAM) is a lightweight, portable application used to manage achievements and statistics in the popular PC gaming platform Steam. This application requires the [Steam client](https://store.steampowered.com/about/), a Steam account and network access. Steam must be running and the user must be logged in.
+> Eine leichte, portable Anwendung zur Verwaltung von Achievements und Statistiken auf Steam.
 
-This is the code for SAM. The closed-source version originally released in 2008, last major release in 2011, and last updated in 2013 (a hotfix).
+## Überblick
 
-The code is being made available so that those interested can do as they like with it.
+Steam Achievement Manager (SAM) ermöglicht das Anzeigen, Freischalten und Zurücksetzen von Steam-Achievements sowie das Bearbeiten von Spielstatistiken.
 
-There are some changes to the code since the last closed-source release:
-- General code maintenance to bring it into a more modern state.
-- Icons have been replaced with ones from the Fugue Icons set.
-- Version has been bumped to 7.0.x.x to indicate the open-source release.
+**Voraussetzungen zum Ausführen:**
+- Windows 10/11
+- [Steam Client](https://store.steampowered.com/about/) (muss laufen, Benutzer eingeloggt)
+- [.NET 8.0 Desktop Runtime (x86)](https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
 
-[Download latest release](https://github.com/gibbed/SteamAchievementManager/releases/latest).
+## Änderungen (SAM-Plus)
 
-[![Build status](https://ci.appveyor.com/api/projects/status/00vic6jliar6j0ol/branch/master?svg=true)](https://ci.appveyor.com/project/gibbed/steamachievementmanager/branch/master)
+| Feature | Beschreibung |
+|---------|-------------|
+| **.NET 8** | Upgrade von .NET Framework 4.8 für bessere Performance |
+| **HttpClient** | Ersetzt veralteten `WebClient` für stabilere Downloads |
+| **Async/Await** | Keine UI-Freezes mehr beim Laden von Icons |
+| **Icons** | Fugue Icons Set |
+
+## Build (Release)
+
+```bash
+# 1. Repository klonen
+git clone <repository-url>
+cd SAM-Plus
+
+# 2. Release-Build erstellen (x86 ist Pflicht wegen Steam-DLLs)
+dotnet publish -c Release -r win-x86 --self-contained false
+
+# 3. Ausgabe-Verzeichnis
+# -> bin\Release\net8.0-windows\win-x86\publish\
+```
+
+Starten Sie `SAM.Picker.exe` aus dem `publish`-Ordner.
+
+## Projektstruktur
+
+```
+SAM-Plus/
+├── SAM.API/       # Steam API Wrapper (P/Invoke)
+├── SAM.Game/      # Achievement Manager UI
+├── SAM.Picker/    # Game Picker UI
+└── bin/           # Build-Ausgabe
+```
+
+## Roadmap
+
+Siehe [PLANS.md](PLANS.md) für geplante Features und bekannte Probleme.
 
 ## Attribution
 
-Most (if not all) icons are from the [Fugue Icons](https://p.yusukekamiyamane.com/) set.
+Icons: [Fugue Icons](https://p.yusukekamiyamane.com/) von Yusuke Kamiyamane.

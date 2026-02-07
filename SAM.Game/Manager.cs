@@ -28,6 +28,8 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http; // Added
+using System.Threading.Tasks; // Added
 using System.Windows.Forms;
 using static SAM.Game.InvariantShorthand;
 using APITypes = SAM.API.Types;
@@ -39,7 +41,8 @@ namespace SAM.Game
         private readonly long _GameId;
         private readonly API.Client _SteamClient;
 
-        private readonly WebClient _IconDownloader = new();
+        private static readonly HttpClient _HttpClient = new(); // Replaced WebClient
+        private bool _isDownloadingIcons = false; // Added flag
 
         private readonly List<Stats.AchievementInfo> _IconQueue = new();
         private readonly List<Stats.StatDefinition> _StatDefinitions = new();
@@ -86,7 +89,7 @@ namespace SAM.Game
             this._GameId = gameId;
             this._SteamClient = client;
 
-            this._IconDownloader.DownloadDataCompleted += this.OnIconDownload;
+            // Removed _IconDownloader event subscription
 
             string name = this._SteamClient.SteamApps001.GetAppData((uint)this._GameId, "name");
             if (name != null)
@@ -119,34 +122,7 @@ namespace SAM.Game
             }
         }
 
-        private void OnIconDownload(object sender, DownloadDataCompletedEventArgs e)
-        {
-            if (e.Error == null && e.Cancelled == false)
-            {
-                var info = (Stats.AchievementInfo)e.UserState;
-
-                Bitmap bitmap;
-                try
-                {
-                    using (MemoryStream stream = new())
-                    {
-                        stream.Write(e.Result, 0, e.Result.Length);
-                        bitmap = new(stream);
-                    }
-                }
-                catch (Exception)
-                {
-                    bitmap = null;
-                }
-
-                this.AddAchievementIcon(info, bitmap);
-                this._AchievementListView.Update();
-            }
-
-            this.DownloadNextIcon();
-        }
-
-        private void DownloadNextIcon()
+        private async void DownloadNextIcon()
         {
             if (this._IconQueue.Count == 0)
             {
@@ -154,21 +130,55 @@ namespace SAM.Game
                 return;
             }
 
-            if (this._IconDownloader.IsBusy == true)
+            if (this._isDownloadingIcons)
             {
                 return;
             }
+            
+            this._isDownloadingIcons = true;
 
-            this._DownloadStatusLabel.Text = $"Downloading {this._IconQueue.Count} icons...";
-            this._DownloadStatusLabel.Visible = true;
+            try
+            {
+                while (this._IconQueue.Count > 0)
+                {
+                    if (this.IsDisposed) return;
 
-            var info = this._IconQueue[0];
-            this._IconQueue.RemoveAt(0);
+                    this._DownloadStatusLabel.Text = $"Downloading {this._IconQueue.Count} icons...";
+                    this._DownloadStatusLabel.Visible = true;
 
+                    var info = this._IconQueue[0];
+                    this._IconQueue.RemoveAt(0);
 
-            this._IconDownloader.DownloadDataAsync(
-                new Uri(_($"https://cdn.steamstatic.com/steamcommunity/public/images/apps/{this._GameId}/{(info.IsAchieved == true ? info.IconNormal : info.IconLocked)}")),
-                info);
+                    try
+                    {
+                        var url = _($"https://cdn.steamstatic.com/steamcommunity/public/images/apps/{this._GameId}/{(info.IsAchieved == true ? info.IconNormal : info.IconLocked)}");
+                        var data = await _HttpClient.GetByteArrayAsync(url);
+                        
+                        using (var stream = new MemoryStream(data))
+                        {
+                            var bitmap = new Bitmap(stream);
+                            this.AddAchievementIcon(info, bitmap);
+                        }
+                    }
+                    catch
+                    {
+                        this.AddAchievementIcon(info, null);
+                    }
+
+                    if (!this.IsDisposed)
+                    {
+                        this._AchievementListView.Update();
+                    }
+                }
+            }
+            finally
+            {
+                this._isDownloadingIcons = false;
+                if (!this.IsDisposed)
+                {
+                    this._DownloadStatusLabel.Visible = false;
+                }
+            }
         }
 
         private static string TranslateError(int id) => id switch
