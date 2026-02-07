@@ -1,134 +1,148 @@
 # Steam Achievement Manager Plus (SAM-Plus)
 
 <p align="center">
-  <strong>🎮 Moderne Steam Achievement Verwaltung</strong><br>
-  <em>Achievements freischalten, zurücksetzen und Statistiken bearbeiten – mit schlankem Dark-Mode UI</em>
+  <strong>🎮 Modern Steam Achievement Management</strong><br>
+  <em>Unlock, reset achievements and edit statistics – with a sleek Dark Mode UI</em>
+</p>
+
+---
+
+## 🖼️ Preview
+
+<p align="center">
+  <img src="https://github.com/HxnryLSD/SAM-Plus/blob/master/PreviewImg/SAM.Picker.webp?raw=true" alt="Game Picker" width="600"/><br>
+  <em>Game Picker – Browse and select from your Steam library</em>
+</p>
+
+<p align="center">
+  <img src="https://github.com/HxnryLSD/SAM-Plus/blob/master/PreviewImg/SAM.Game.webp?raw=true" alt="Achievement Manager" width="600"/><br>
+  <em>Achievement Manager – Unlock or reset achievements with one click</em>
 </p>
 
 ---
 
 ## ✨ Features
 
-### 🖥️ Modernes Dark-Theme UI
-- **Borderless Window Design** mit custom Title Bar
-- **Dark Mode** durchgehend – keine weißen Elemente
-- **Smooth Scrolling** mit Momentum-Effekt
-- **Responsive Layout** – Fenster frei skalierbar
-- **Custom Scrollbars** im Store-Design
+### 🖥️ Modern Dark Theme UI
+- **Borderless Window Design** with custom Title Bar
+- **Dark Mode** throughout – no white elements
+- **Smooth Scrolling** with momentum effect
+- **Responsive Layout** – freely resizable window
+- **Custom Scrollbars** in Store design
 
 ### 🎯 Achievement Management
-- Alle Achievements eines Spiels anzeigen
-- **Einzeln oder alle** freischalten/zurücksetzen
-- Unlock-Zeitstempel anzeigen
-- Achievement-Icons automatisch laden
+- View all achievements for a game
+- **Unlock or reset** individually or all at once
+- Display unlock timestamps
+- Automatically load achievement icons
 
-### 📊 Statistik-Editor
-- Spielstatistiken anzeigen und bearbeiten
-- Integer- und Float-Werte unterstützt
-- Änderungen mit einem Klick speichern
+### 📊 Statistics Editor
+- View and edit game statistics
+- Supports integer and float values
+- Save changes with one click
 
 ### ⚡ Performance
-- **.NET 8.0** – schneller als .NET Framework
-- **Async Icon-Loading** – keine UI-Freezes
-- **Parallele Downloads** – Icons laden gleichzeitig
-- **Bitmap-Pool** – effizientes Memory-Management
+- **.NET 8.0** – faster than .NET Framework
+- **Async Icon Loading** – no UI freezes
+- **Parallel Downloads** – icons load simultaneously
+- **Bitmap Pool** – efficient memory management
 
 ---
 
-## 📋 Voraussetzungen
+## 📋 Requirements
 
-| Komponente | Version | Hinweis |
-|------------|---------|---------|
-| **Windows** | 10 / 11 | x86 oder x64 |
-| **Steam Client** | Aktuell | Muss laufen, Benutzer eingeloggt |
-| **.NET Runtime** | [8.0 Desktop (x86)](https://dotnet.microsoft.com/download/dotnet/8.0) | **x86 Version erforderlich!** |
+| Component | Version | Note |
+|-----------|---------|------|
+| **Windows** | 10 / 11 | x86 or x64 |
+| **Steam Client** | Latest | Must be running, user logged in |
+| **.NET Runtime** | [8.0 Desktop (x86)](https://dotnet.microsoft.com/download/dotnet/8.0) | **x86 version required!** |
 
-> ⚠️ **Wichtig:** Die x86-Version der .NET Runtime ist Pflicht, da Steam native DLLs nur als 32-bit vorliegen.
+> ⚠️ **Important:** The x86 version of the .NET Runtime is mandatory, as Steam native DLLs are only available as 32-bit.
 
 ---
 
 ## 🚀 Installation
 
-### Option 1: Release herunterladen
-1. Neuestes Release von der [Releases-Seite](../../releases) herunterladen
-2. ZIP entpacken
-3. `SAM.Picker.exe` starten
+### Option 1: Download Release
+1. Download the latest release from the [Releases page](../../releases)
+2. Extract the ZIP
+3. Run `SAM.Picker.exe`
 
-### Option 2: Selbst bauen
+### Option 2: Build Yourself
 ```powershell
-# Repository klonen
+# Clone repository
 git clone https://github.com/username/SAM-Plus.git
 cd SAM-Plus
 
-# Release-Build erstellen
+# Create release build
 dotnet publish -c Release -r win-x86 --self-contained false
 
-# Ausgabe: upload\SAM.Picker.exe
+# Output: upload\SAM.Picker.exe
 ```
 
 ---
 
-## 🎮 Verwendung
+## 🎮 Usage
 
-1. **Steam starten** und einloggen
-2. **SAM.Picker.exe** ausführen
-3. Spiel aus der Liste wählen (Doppelklick oder Enter)
-4. Im Achievement Manager:
-   - ✅ Checkbox = Achievement freischalten
-   - ❌ Checkbox = Achievement zurücksetzen
-   - **Commit** klicken um Änderungen zu speichern
+1. **Start Steam** and log in
+2. **Run SAM.Picker.exe**
+3. Select a game from the list (double-click or Enter)
+4. In the Achievement Manager:
+   - ✅ Checkbox = Unlock achievement
+   - ❌ Checkbox = Reset achievement
+   - Click **Commit** to save changes
 
-### Tastenkürzel
+### Keyboard Shortcuts
 
-| Taste | Funktion |
-|-------|----------|
-| `Enter` | Spiel öffnen |
-| `Escape` | Fenster schließen |
-| `Strg+F` | Suche fokussieren |
+| Key | Function |
+|-----|----------|
+| `Enter` | Open game |
+| `Escape` | Close window |
+| `Ctrl+F` | Focus search |
 
 ---
 
-## 🏗️ Projektstruktur
+## 🏗️ Project Structure
 
 ```
 SAM-Plus/
 ├── SAM.API/                 # Steam API Wrapper
-│   ├── Client.cs            # Hauptclient für Steam-Kommunikation
-│   ├── NativeWrapper.cs     # P/Invoke für steam_api.dll
-│   ├── StoreThemeColors.cs  # Dark Theme Farbdefinitionen
+│   ├── Client.cs            # Main client for Steam communication
+│   ├── NativeWrapper.cs     # P/Invoke for steam_api.dll
+│   ├── StoreThemeColors.cs  # Dark Theme color definitions
 │   ├── StoreTitleBar.cs     # Custom Borderless Title Bar
 │   ├── StoreScrollBar.cs    # Custom Dark Scrollbar
-│   └── Wrappers/            # Interface-Wrapper für Steam APIs
+│   └── Wrappers/            # Interface wrappers for Steam APIs
 │
 ├── SAM.Game/                # Achievement Manager
-│   ├── Manager.cs           # Hauptfenster mit Owner-Draw
-│   └── Stats/               # Achievement & Statistik-Klassen
+│   ├── Manager.cs           # Main window with Owner-Draw
+│   └── Stats/               # Achievement & Statistics classes
 │
 ├── SAM.Picker/              # Game Picker
-│   ├── GamePicker.cs        # Spielauswahl mit Smooth Scrolling
-│   └── GameInfo.cs          # Spiel-Datenmodell
+│   ├── GamePicker.cs        # Game selection with Smooth Scrolling
+│   └── GameInfo.cs          # Game data model
 │
-└── upload/                  # Build-Ausgabe
+└── upload/                  # Build output
 ```
 
 ---
 
-## 🛠️ Technische Details
+## 🛠️ Technical Details
 
-### UI-Architektur
-- **WinForms** mit Custom Owner-Draw für alle Controls
-- **Borderless Window** mit manuellem Resize-Handling
-- **Win32 P/Invoke** für Scrollbar-Management
-- **Double Buffering** gegen Flicker
+### UI Architecture
+- **WinForms** with Custom Owner-Draw for all controls
+- **Borderless Window** with manual resize handling
+- **Win32 P/Invoke** for scrollbar management
+- **Double Buffering** to prevent flicker
 
 ### Steam Integration
 - Native `steam_api.dll` via P/Invoke
-- Callbacks für Achievement-Updates
-- Icon-Download über Steam CDN
+- Callbacks for achievement updates
+- Icon download via Steam CDN
 
-### Änderungen gegenüber Original-SAM
-| Bereich | Original | SAM-Plus |
-|---------|----------|----------|
+### Changes Compared to Original SAM
+| Area | Original | SAM-Plus |
+|------|----------|----------|
 | Framework | .NET Framework 4.8 | .NET 8.0 |
 | HTTP | WebClient | HttpClient (async) |
 | UI | Standard WinForms | Custom Dark Theme |
@@ -137,34 +151,34 @@ SAM-Plus/
 
 ---
 
-## 📝 Bekannte Einschränkungen
+## 📝 Known Limitations
 
-- **VAC-geschützte Spiele:** Änderungen können zu VAC-Bans führen
-- **Server-seitige Achievements:** Manche Achievements werden serverseitig validiert
-- **Online-Statistiken:** Änderungen können bei Online-Spielen zurückgesetzt werden
+- **VAC-protected games:** Changes may result in VAC bans
+- **Server-side achievements:** Some achievements are validated server-side
+- **Online statistics:** Changes may be reset in online games
 
-> ⚠️ **Disclaimer:** Die Nutzung erfolgt auf eigene Gefahr. Die Entwickler übernehmen keine Verantwortung für Account-Sperren oder andere Konsequenzen.
-
----
-
-## 📜 Lizenz
-
-Dieses Projekt steht unter der Lizenz im [LICENSE.txt](LICENSE.txt).
-
-### Attributionen
-
-- **Original SAM** von [gibbed](https://github.com/gibbed)
-- **Icons:** [Fugue Icons](https://p.yusukekamiyamane.com/) von Yusuke Kamiyamane
-- **UI Design** inspiriert von Steam Store
+> ⚠️ **Disclaimer:** Use at your own risk. The developers assume no responsibility for account bans or other consequences.
 
 ---
 
-## 🤝 Beitragen
+## 📜 License
 
-Pull Requests sind willkommen! Für größere Änderungen bitte erst ein Issue öffnen.
+This project is licensed under the terms in [LICENSE.txt](LICENSE.txt).
 
-1. Fork erstellen
-2. Feature-Branch anlegen (`git checkout -b feature/MeinFeature`)
-3. Änderungen committen (`git commit -m 'Feature hinzugefügt'`)
-4. Branch pushen (`git push origin feature/MeinFeature`)
-5. Pull Request öffnen
+### Attributions
+
+- **Original SAM** by [gibbed](https://github.com/gibbed)
+- **Icons:** [Fugue Icons](https://p.yusukekamiyamane.com/) by Yusuke Kamiyamane
+- **UI Design** inspired by Steam Store
+
+---
+
+## 🤝 Contributing
+
+Pull requests are welcome! For major changes, please open an issue first.
+
+1. Create a fork
+2. Create a feature branch (`git checkout -b feature/MyFeature`)
+3. Commit your changes (`git commit -m 'Added feature'`)
+4. Push the branch (`git push origin feature/MyFeature`)
+5. Open a Pull Request
