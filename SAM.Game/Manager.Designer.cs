@@ -55,6 +55,7 @@
             this._DisplayLabel = new System.Windows.Forms.ToolStripLabel();
             this._DisplayLockedOnlyButton = new System.Windows.Forms.ToolStripButton();
             this._DisplayUnlockedOnlyButton = new System.Windows.Forms.ToolStripButton();
+            this._DisplayHiddenOnlyButton = new System.Windows.Forms.ToolStripButton();
             this._MatchingStringLabel = new System.Windows.Forms.ToolStripLabel();
             this._MatchingStringTextBox = new System.Windows.Forms.ToolStripTextBox();
             this._StatisticsTabPage = new System.Windows.Forms.TabPage();
@@ -243,6 +244,7 @@
             this._DisplayLabel,
             this._DisplayLockedOnlyButton,
             this._DisplayUnlockedOnlyButton,
+            this._DisplayHiddenOnlyButton,
             _ToolStripSeparator2,
             this._MatchingStringLabel,
             this._MatchingStringTextBox});
@@ -310,6 +312,16 @@
             this._DisplayUnlockedOnlyButton.Size = new System.Drawing.Size(60, 22);
             this._DisplayUnlockedOnlyButton.Text = "unlocked";
             this._DisplayUnlockedOnlyButton.Click += new System.EventHandler(this.OnDisplayUncheckedOnly);
+            // 
+            // _DisplayHiddenOnlyButton
+            // 
+            this._DisplayHiddenOnlyButton.CheckOnClick = true;
+            this._DisplayHiddenOnlyButton.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Text;
+            this._DisplayHiddenOnlyButton.ImageTransparentColor = System.Drawing.Color.Magenta;
+            this._DisplayHiddenOnlyButton.Name = "_DisplayHiddenOnlyButton";
+            this._DisplayHiddenOnlyButton.Size = new System.Drawing.Size(50, 22);
+            this._DisplayHiddenOnlyButton.Text = "hidden";
+            this._DisplayHiddenOnlyButton.Click += new System.EventHandler(this.OnDisplayHiddenOnly);
             // 
             // _MatchingStringLabel
             // 
@@ -422,6 +434,7 @@
         private System.Windows.Forms.ToolStripLabel _DisplayLabel;
         private System.Windows.Forms.ToolStripButton _DisplayUnlockedOnlyButton;
         private System.Windows.Forms.ToolStripButton _DisplayLockedOnlyButton;
+        private System.Windows.Forms.ToolStripButton _DisplayHiddenOnlyButton;
         private System.Windows.Forms.ToolStripLabel _MatchingStringLabel;
         private System.Windows.Forms.ToolStripTextBox _MatchingStringTextBox;
         private System.Windows.Forms.ColumnHeader _AchievementUnlockTimeColumnHeader;

@@ -22,6 +22,7 @@
 
 using System;
 using System.Diagnostics;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace SAM.Game
@@ -31,6 +32,20 @@ namespace SAM.Game
         [STAThread]
         public static void Main(string[] args)
         {
+            // High DPI support
+            Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+
+            // Global exception handling
+            Application.ThreadException += OnThreadException;
+            AppDomain.CurrentDomain.UnhandledException += OnUnhandledException;
+            Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+
+            // Initialize services and theming
+            API.ServiceLocator.Initialize();
+            API.ThemeManager.Initialize();
+
+            API.Logger.Info("SAM.Game started.");
+
             long appId;
 
             if (args.Length == 0)
@@ -110,6 +125,31 @@ namespace SAM.Game
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
                 Application.Run(new Manager(appId, client));
+            }
+
+            API.Logger.Info("SAM.Game closed.");
+        }
+
+        private static void OnThreadException(object sender, ThreadExceptionEventArgs e)
+        {
+            API.Logger.Fatal(e.Exception, "Application.ThreadException");
+            MessageBox.Show(
+                $"An unexpected error occurred:\n\n{e.Exception.Message}\n\nDetails have been logged to:\n{API.Logger.LogFilePath}",
+                "Error",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
+
+        private static void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
+        {
+            if (e.ExceptionObject is Exception ex)
+            {
+                API.Logger.Fatal(ex, "AppDomain.UnhandledException");
+                MessageBox.Show(
+                    $"A fatal error occurred:\n\n{ex.Message}\n\nDetails have been logged to:\n{API.Logger.LogFilePath}",
+                    "Fatal Error",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
             }
         }
     }

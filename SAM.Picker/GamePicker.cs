@@ -31,6 +31,7 @@ using System.IO;
 using System.Linq;
 using System.Net; // Removed WebClient usage
 using System.Net.Http; // Added
+using System.Threading;
 using System.Threading.Tasks; // Added
 using System.Windows.Forms;
 using System.Xml.XPath;
@@ -41,8 +42,9 @@ namespace SAM.Picker
 {
     internal partial class GamePicker : Form
     {
-        private static readonly HttpClient _HttpClient = new(); // Added
+        private static System.Net.Http.HttpClient HttpClient => API.ServiceLocator.HttpClient;
         private bool _isDownloadingLogos = false; // Added
+        private static readonly SemaphoreSlim _downloadSemaphore = new(5); // Max 5 parallel downloads
 
         private readonly API.Client _SteamClient;
 
@@ -66,6 +68,20 @@ namespace SAM.Picker
             this._LogoQueue = new();
 
             this.InitializeComponent();
+
+            // Apply theme
+            this.Load += (s, e) => API.ThemeManager.ApplyTheme(this);
+            API.ThemeManager.ThemeChanged += () => { if (!this.IsDisposed) API.ThemeManager.ApplyTheme(this); };
+
+            // Add theme toggle button
+            var themeButton = new ToolStripButton
+            {
+                Text = "🌙",
+                ToolTipText = "Toggle Dark/Light Mode",
+                Alignment = ToolStripItemAlignment.Right
+            };
+            themeButton.Click += (s, e) => API.ThemeManager.ToggleTheme();
+            this._PickerToolStrip.Items.Add(themeButton);
 
             Bitmap blank = new(this._LogoImageList.ImageSize.Width, this._LogoImageList.ImageSize.Height);
             using (var g = Graphics.FromImage(blank))
@@ -109,7 +125,7 @@ namespace SAM.Picker
 
             try 
             {
-                var bytes = await _HttpClient.GetByteArrayAsync("https://gib.me/sam/games.xml");
+                var bytes = await HttpClient.GetByteArrayAsync(API.AppConfig.GamesListUrl);
                 
                 List<KeyValuePair<uint, string>> pairs = new();
                 using (MemoryStream stream = new(bytes, false))
@@ -286,69 +302,98 @@ namespace SAM.Picker
 
             try 
             {
-                while (true)
+                // Collect visible items to download
+                var itemsToDownload = new List<GameInfo>();
+                while (this._LogoQueue.TryDequeue(out var info))
                 {
-                    if (this.IsDisposed) return;
-
-                    GameInfo info = null;
-                    
-                    // Logic to find next item
-                    // We can reuse the loop logic but instead of RunWorkerAsync, we process it.
-                    
-                    while (true)
+                    if (info.Item == null) continue;
+                    if (this._FilteredGames.Contains(info) == false ||
+                        info.Item.Bounds.IntersectsWith(this._GameListView.ClientRectangle) == false)
                     {
-                        if (this._LogoQueue.TryDequeue(out info) == false)
-                        {
-                            // Queue empty
-                            this._DownloadStatusLabel.Visible = false;
-                            return;
-                        }
-
-                        if (info.Item == null) continue;
-
-                        if (this._FilteredGames.Contains(info) == false ||
-                            info.Item.Bounds.IntersectsWith(this._GameListView.ClientRectangle) == false)
-                        {
-                            this._LogosAttempting.Remove(info.ImageUrl);
-                            continue;
-                        }
-
-                        break; // Found one
+                        this._LogosAttempting.Remove(info.ImageUrl);
+                        continue;
                     }
-
-                    this._DownloadStatusLabel.Text = $"Downloading {1 + this._LogoQueue.Count} game icons...";
-                    this._DownloadStatusLabel.Visible = true;
-
-                    // Download it
-                    try 
-                    {
-                        this._LogosAttempted.Add(info.ImageUrl);
-                        var data = await _HttpClient.GetByteArrayAsync(info.ImageUrl);
-                        using (var stream = new MemoryStream(data))
-                        {
-                            var bitmap = new Bitmap(stream);
-                            
-                            if (this.IsDisposed) return;
-                            
-                            this._GameListView.BeginUpdate();
-                            var imageIndex = this._LogoImageList.Images.Count;
-                            this._LogoImageList.Images.Add(info.ImageUrl, bitmap);
-                            info.ImageIndex = imageIndex;
-                            this._GameListView.EndUpdate();
-                        }
-                    }
-                    catch
-                    {
-                         // Failed
-                    }
-                    
-                    // Loop continues to next item
+                    itemsToDownload.Add(info);
                 }
+
+                if (itemsToDownload.Count == 0)
+                {
+                    this._DownloadStatusLabel.Visible = false;
+                    return;
+                }
+
+                this._DownloadStatusLabel.Text = $"Downloading {itemsToDownload.Count} game icons...";
+                this._DownloadStatusLabel.Visible = true;
+
+                // Download in parallel with throttling
+                var downloadTasks = itemsToDownload.Select(info => DownloadLogoAsync(info)).ToList();
+                await Task.WhenAll(downloadTasks);
             }
             finally
             {
                 this._isDownloadingLogos = false;
-                if (!IsDisposed) this._DownloadStatusLabel.Visible = false;
+                if (!IsDisposed)
+                {
+                    this._DownloadStatusLabel.Visible = false;
+                    // Force GC after large download batch
+                    if (GC.GetTotalMemory(false) > 100_000_000) // > 100MB
+                    {
+                        GC.Collect(2, GCCollectionMode.Optimized, false);
+                    }
+                }
+            }
+        }
+
+        private async Task DownloadLogoAsync(GameInfo info)
+        {
+            await _downloadSemaphore.WaitAsync();
+            try
+            {
+                if (this.IsDisposed) return;
+
+                this._LogosAttempted.Add(info.ImageUrl);
+
+                // Check cache first
+                var cachedBitmap = API.IconCache.Get(info.ImageUrl);
+                if (cachedBitmap != null)
+                {
+                    if (!this.IsDisposed)
+                    {
+                        this.Invoke(() =>
+                        {
+                            this._GameListView.BeginUpdate();
+                            var imageIndex = this._LogoImageList.Images.Count;
+                            this._LogoImageList.Images.Add(info.ImageUrl, cachedBitmap);
+                            info.ImageIndex = imageIndex;
+                            this._GameListView.EndUpdate();
+                        });
+                    }
+                    return;
+                }
+
+                // Download and cache
+                var data = await HttpClient.GetByteArrayAsync(info.ImageUrl);
+                var bitmap = API.IconCache.Store(info.ImageUrl, data);
+
+                if (!this.IsDisposed && bitmap != null)
+                {
+                    this.Invoke(() =>
+                    {
+                        this._GameListView.BeginUpdate();
+                        var imageIndex = this._LogoImageList.Images.Count;
+                        this._LogoImageList.Images.Add(info.ImageUrl, bitmap);
+                        info.ImageIndex = imageIndex;
+                        this._GameListView.EndUpdate();
+                    });
+                }
+            }
+            catch
+            {
+                // Failed - logo stays blank
+            }
+            finally
+            {
+                _downloadSemaphore.Release();
             }
         }
 
@@ -361,7 +406,7 @@ namespace SAM.Picker
             candidate = this._SteamClient.SteamApps001.GetAppData(id, _($"small_capsule/{currentLanguage}"));
             if (string.IsNullOrEmpty(candidate) == false)
             {
-                return _($"https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/{id}/{candidate}");
+                return _($"{API.AppConfig.SteamCloudflareBaseUrl}/{id}/{candidate}");
             }
 
             if (currentLanguage != "english")
@@ -369,14 +414,14 @@ namespace SAM.Picker
                 candidate = this._SteamClient.SteamApps001.GetAppData(id, "small_capsule/english");
                 if (string.IsNullOrEmpty(candidate) == false)
                 {
-                    return _($"https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/{id}/{candidate}");
+                    return _($"{API.AppConfig.SteamCloudflareBaseUrl}/{id}/{candidate}");
                 }
             }
 
             candidate = this._SteamClient.SteamApps001.GetAppData(id, "logo");
             if (string.IsNullOrEmpty(candidate) == false)
             {
-                return _($"https://cdn.steamstatic.com/steamcommunity/public/images/apps/{id}/{candidate}.jpg");
+                return _($"{API.AppConfig.SteamCdnBaseUrl}/{id}/{candidate}.jpg");
             }
 
             return null;

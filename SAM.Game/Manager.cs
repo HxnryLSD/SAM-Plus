@@ -21,6 +21,7 @@
  */
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
@@ -29,6 +30,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http; // Added
+using System.Threading;
 using System.Threading.Tasks; // Added
 using System.Windows.Forms;
 using static SAM.Game.InvariantShorthand;
@@ -41,10 +43,11 @@ namespace SAM.Game
         private readonly long _GameId;
         private readonly API.Client _SteamClient;
 
-        private static readonly HttpClient _HttpClient = new(); // Replaced WebClient
+        private static System.Net.Http.HttpClient HttpClient => API.ServiceLocator.HttpClient;
         private bool _isDownloadingIcons = false; // Added flag
+        private static readonly SemaphoreSlim _downloadSemaphore = new(5); // Max 5 parallel downloads
 
-        private readonly List<Stats.AchievementInfo> _IconQueue = new();
+        private readonly ConcurrentQueue<Stats.AchievementInfo> _IconQueue = new();
         private readonly List<Stats.StatDefinition> _StatDefinitions = new();
 
         private readonly List<Stats.AchievementDefinition> _AchievementDefinitions = new();
@@ -59,6 +62,20 @@ namespace SAM.Game
         {
             this.InitializeComponent();
 
+            // Apply theme
+            this.Load += (s, e) => API.ThemeManager.ApplyTheme(this);
+            API.ThemeManager.ThemeChanged += () => { if (!this.IsDisposed) API.ThemeManager.ApplyTheme(this); };
+
+            // Add theme toggle button
+            var themeButton = new ToolStripButton
+            {
+                Text = "🌙",
+                ToolTipText = "Toggle Dark/Light Mode",
+                Alignment = ToolStripItemAlignment.Right
+            };
+            themeButton.Click += (s, e) => API.ThemeManager.ToggleTheme();
+            this._MainToolStrip.Items.Add(themeButton);
+
             this._MainTabControl.SelectedTab = this._AchievementsTabPage;
             //this.statisticsList.Enabled = this.checkBox1.Checked;
 
@@ -69,17 +86,17 @@ namespace SAM.Game
             this._StatisticsDataGridView.Columns.Add("name", "Name");
             this._StatisticsDataGridView.Columns[0].ReadOnly = true;
             this._StatisticsDataGridView.Columns[0].Width = 200;
-            this._StatisticsDataGridView.Columns[0].DataPropertyName = "DisplayName";
+            this._StatisticsDataGridView.Columns[0].DataPropertyName = nameof(Stats.StatInfo.DisplayName);
 
             this._StatisticsDataGridView.Columns.Add("value", "Value");
             this._StatisticsDataGridView.Columns[1].ReadOnly = this._EnableStatsEditingCheckBox.Checked == false;
             this._StatisticsDataGridView.Columns[1].Width = 90;
-            this._StatisticsDataGridView.Columns[1].DataPropertyName = "Value";
+            this._StatisticsDataGridView.Columns[1].DataPropertyName = nameof(Stats.StatInfo.Value);
 
             this._StatisticsDataGridView.Columns.Add("extra", "Extra");
             this._StatisticsDataGridView.Columns[2].ReadOnly = true;
             this._StatisticsDataGridView.Columns[2].Width = 200;
-            this._StatisticsDataGridView.Columns[2].DataPropertyName = "Extra";
+            this._StatisticsDataGridView.Columns[2].DataPropertyName = nameof(Stats.StatInfo.Extra);
 
             this._StatisticsDataGridView.DataSource = new BindingSource()
             {
@@ -124,7 +141,7 @@ namespace SAM.Game
 
         private async void DownloadNextIcon()
         {
-            if (this._IconQueue.Count == 0)
+            if (this._IconQueue.IsEmpty)
             {
                 this._DownloadStatusLabel.Visible = false;
                 return;
@@ -139,36 +156,25 @@ namespace SAM.Game
 
             try
             {
-                while (this._IconQueue.Count > 0)
+                // Collect all items to download
+                var itemsToDownload = new List<Stats.AchievementInfo>();
+                while (this._IconQueue.TryDequeue(out var item))
                 {
-                    if (this.IsDisposed) return;
+                    itemsToDownload.Add(item);
+                }
 
-                    this._DownloadStatusLabel.Text = $"Downloading {this._IconQueue.Count} icons...";
-                    this._DownloadStatusLabel.Visible = true;
+                if (itemsToDownload.Count == 0) return;
 
-                    var info = this._IconQueue[0];
-                    this._IconQueue.RemoveAt(0);
+                this._DownloadStatusLabel.Text = $"Downloading {itemsToDownload.Count} icons...";
+                this._DownloadStatusLabel.Visible = true;
 
-                    try
-                    {
-                        var url = _($"https://cdn.steamstatic.com/steamcommunity/public/images/apps/{this._GameId}/{(info.IsAchieved == true ? info.IconNormal : info.IconLocked)}");
-                        var data = await _HttpClient.GetByteArrayAsync(url);
-                        
-                        using (var stream = new MemoryStream(data))
-                        {
-                            var bitmap = new Bitmap(stream);
-                            this.AddAchievementIcon(info, bitmap);
-                        }
-                    }
-                    catch
-                    {
-                        this.AddAchievementIcon(info, null);
-                    }
+                // Download in parallel with throttling
+                var downloadTasks = itemsToDownload.Select(info => DownloadIconAsync(info)).ToList();
+                await Task.WhenAll(downloadTasks);
 
-                    if (!this.IsDisposed)
-                    {
-                        this._AchievementListView.Update();
-                    }
+                if (!this.IsDisposed)
+                {
+                    this._AchievementListView.Update();
                 }
             }
             finally
@@ -177,7 +183,55 @@ namespace SAM.Game
                 if (!this.IsDisposed)
                 {
                     this._DownloadStatusLabel.Visible = false;
+                    // Force GC after large download batch
+                    if (GC.GetTotalMemory(false) > 100_000_000) // > 100MB
+                    {
+                        GC.Collect(2, GCCollectionMode.Optimized, false);
+                    }
                 }
+            }
+        }
+
+        private async Task DownloadIconAsync(Stats.AchievementInfo info)
+        {
+            await _downloadSemaphore.WaitAsync();
+            try
+            {
+                if (this.IsDisposed) return;
+
+                var iconKey = info.IsAchieved == true ? info.IconNormal : info.IconLocked;
+                var url = _($"{API.AppConfig.SteamCdnBaseUrl}/{this._GameId}/{iconKey}");
+
+                // Check cache first
+                var cachedBitmap = API.IconCache.Get(url);
+                if (cachedBitmap != null)
+                {
+                    if (!this.IsDisposed)
+                    {
+                        this.Invoke(() => this.AddAchievementIcon(info, cachedBitmap));
+                    }
+                    return;
+                }
+
+                // Download and cache
+                var data = await HttpClient.GetByteArrayAsync(url);
+                var bitmap = API.IconCache.Store(url, data);
+                
+                if (!this.IsDisposed && bitmap != null)
+                {
+                    this.Invoke(() => this.AddAchievementIcon(info, bitmap));
+                }
+            }
+            catch
+            {
+                if (!this.IsDisposed)
+                {
+                    this.Invoke(() => this.AddAchievementIcon(info, null));
+                }
+            }
+            finally
+            {
+                _downloadSemaphore.Release();
             }
         }
 
@@ -226,7 +280,7 @@ namespace SAM.Game
                     return false;
                 }
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 return false;
             }
@@ -441,10 +495,17 @@ namespace SAM.Game
 
             bool wantLocked = this._DisplayLockedOnlyButton.Checked == true;
             bool wantUnlocked = this._DisplayUnlockedOnlyButton.Checked == true;
+            bool wantHidden = this._DisplayHiddenOnlyButton.Checked == true;
 
             foreach (var def in this._AchievementDefinitions)
             {
                 if (string.IsNullOrEmpty(def.Id) == true)
+                {
+                    continue;
+                }
+
+                // Filter hidden achievements
+                if (wantHidden && !def.IsHidden)
                 {
                     continue;
                 }
@@ -582,7 +643,7 @@ namespace SAM.Game
             }
             else
             {
-                this._IconQueue.Add(info);
+                this._IconQueue.Enqueue(info);
 
                 if (startDownload == true)
                 {
@@ -896,6 +957,11 @@ namespace SAM.Game
                 this._DisplayUnlockedOnlyButton.Checked = false;
             }
 
+            this.GetAchievements();
+        }
+
+        private void OnDisplayHiddenOnly(object sender, EventArgs e)
+        {
             this.GetAchievements();
         }
 

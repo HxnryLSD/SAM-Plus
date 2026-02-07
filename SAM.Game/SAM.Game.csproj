@@ -35,9 +35,6 @@
     <UseVSHostingProcess>false</UseVSHostingProcess>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="System.Windows.Forms" />
-  </ItemGroup>
-  <ItemGroup>
     <Compile Update="DoubleBufferedListView.cs">
       <SubType>Component</SubType>
     </Compile>
