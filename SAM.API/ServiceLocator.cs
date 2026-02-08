@@ -51,8 +51,11 @@ namespace SAM.API
             {
                 if (_isInitialized) return;
 
-                // Register default services
-                Register<HttpClient>(new HttpClient());
+                // Register HttpClient with proper headers for Steam API
+                var httpClient = new HttpClient();
+                httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+                httpClient.DefaultRequestHeaders.Add("Accept", "application/json");
+                Register<HttpClient>(httpClient);
 
                 _isInitialized = true;
                 Logger.Info("ServiceLocator initialized");

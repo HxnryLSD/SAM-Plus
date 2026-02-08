@@ -96,8 +96,8 @@ namespace SAM.Picker
         private readonly System.Windows.Forms.Timer _smoothScrollTimer;
         private float _scrollVelocity = 0;
         private float _scrollAccumulator = 0;
-        private const float SCROLL_FRICTION = 0.85f;
-        private const float SCROLL_MIN_VELOCITY = 0.5f;
+        private const float SCROLL_FRICTION = 0.92f;
+        private const float SCROLL_MIN_VELOCITY = 0.3f;
 
         private readonly Dictionary<uint, GameInfo> _Games;
         private readonly List<GameInfo> _FilteredGames;
@@ -119,6 +119,9 @@ namespace SAM.Picker
             this._LogoQueue = new();
 
             this.InitializeComponent();
+
+            // Load protection cache from disk
+            API.ProtectionCache.Load();
 
             // Enable double buffering for smooth resizing
             this.DoubleBuffered = true;
@@ -250,6 +253,10 @@ namespace SAM.Picker
             
             // Apply Store theme
             ApplyStoreTheme();
+
+            // Set row height for Details view using a dummy ImageList
+            var rowHeightImageList = new ImageList { ImageSize = new Size(1, 75) };
+            this._GameListView.SmallImageList = rowHeightImageList;
 
             // Handle mouse wheel at form level for scrolling
             Application.AddMessageFilter(this);
@@ -399,7 +406,7 @@ namespace SAM.Picker
             if (_scrollBar == null || this._FilteredGames.Count == 0) return;
 
             // Add velocity for smooth scrolling (negative because wheel up = scroll up)
-            float delta = -e.Delta * 0.4f;
+            float delta = -e.Delta * 0.15f;
             _scrollVelocity += delta;
             
             // Start smooth scroll timer if not running
@@ -664,10 +671,43 @@ namespace SAM.Picker
                     #pragma warning restore CS4014
                 }
 
-                this._PickerStatusLabel.Text = "Checking game ownership...";
-                foreach (var kv in pairs)
+                // Process games in batches - show results progressively for lower perceived latency
+                const int BATCH_SIZE = 500;
+                int totalGames = pairs.Count;
+                
+                for (int i = 0; i < totalGames; i += BATCH_SIZE)
                 {
-                    this.AddGame(kv.Key, kv.Value);
+                    var batch = pairs.Skip(i).Take(BATCH_SIZE).ToList();
+                    
+                    // Process batch on background thread
+                    var ownedGames = await Task.Run(() =>
+                    {
+                        var results = new List<(uint id, string type, string name)>();
+                        foreach (var kv in batch)
+                        {
+                            if (this._SteamClient.SteamApps008.IsSubscribedApp(kv.Key))
+                            {
+                                var name = this._SteamClient.SteamApps001.GetAppData(kv.Key, "name");
+                                results.Add((kv.Key, kv.Value, name));
+                            }
+                        }
+                        return results;
+                    });
+
+                    // Add games to dictionary on UI thread
+                    foreach (var (id, type, name) in ownedGames)
+                    {
+                        if (!this._Games.ContainsKey(id))
+                        {
+                            var info = new GameInfo(id, type) { Name = name };
+                            this._Games.Add(id, info);
+                        }
+                    }
+
+                    // Update UI after each batch so user sees games appearing
+                    int processed = Math.Min(i + BATCH_SIZE, totalGames);
+                    this._PickerStatusLabel.Text = $"Loading games... {processed}/{totalGames}";
+                    this.RefreshGames();
                 }
             }
             catch (Exception e)
@@ -733,6 +773,12 @@ namespace SAM.Picker
             }
 
             this._GameListView.VirtualListSize = this._FilteredGames.Count;
+            
+            // Update column width for Details view
+            if (this._GameListView.Columns.Count > 0)
+            {
+                this._GameListView.Columns[0].Width = this._GameListView.ClientSize.Width;
+            }
             
             // Update game count label with simple text
             if (_gameCountLabel != null)
@@ -1159,10 +1205,9 @@ namespace SAM.Picker
 
         private void OnGameListViewDrawItem(object sender, DrawListViewItemEventArgs e)
         {
-            e.DrawDefault = true;
-
-            if (e.Item.Bounds.IntersectsWith(this._GameListView.ClientRectangle) == false)
+            if (e.ItemIndex < 0 || e.ItemIndex >= this._FilteredGames.Count)
             {
+                e.DrawDefault = true;
                 return;
             }
 
@@ -1172,6 +1217,176 @@ namespace SAM.Picker
                 this.AddGameToLogoQueue(info);
                 this.DownloadNextLogo();
             }
+
+            // Check if game has protected stats
+            bool isProtected = info.IsProtected;
+
+            // Use ListView's client width for proper drawing bounds (Details view bounds can be unreliable)
+            var listViewWidth = this._GameListView.ClientSize.Width;
+            var bounds = new Rectangle(e.Bounds.X, e.Bounds.Y, listViewWidth, e.Bounds.Height);
+            var g = e.Graphics;
+            g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+
+            // Tile dimensions
+            int padding = 4;
+            int imageWidth = this._LogoImageList.ImageSize.Width;
+            int imageHeight = this._LogoImageList.ImageSize.Height;
+            int cornerRadius = 6;
+
+            // Draw background with rounded corners
+            var bgRect = new Rectangle(bounds.X + 2, bounds.Y + 2, bounds.Width - 4, bounds.Height - 4);
+            using (var path = CreateRoundedRectPath(bgRect, cornerRadius))
+            {
+                if (e.Item.Selected)
+                {
+                    if (isProtected)
+                    {
+                        // Protected game selected - dark red gradient
+                        using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(
+                            bgRect, 
+                            Color.FromArgb(80, 180, 60, 60),   // Dark red top
+                            Color.FromArgb(60, 140, 40, 40),   // Darker red bottom
+                            System.Drawing.Drawing2D.LinearGradientMode.Vertical))
+                        {
+                            g.FillPath(brush, path);
+                        }
+                        // Selection border - red tint
+                        using (var pen = new Pen(Color.FromArgb(150, 200, 100, 100), 1.5f))
+                        {
+                            g.DrawPath(pen, path);
+                        }
+                    }
+                    else
+                    {
+                        // Modern gradient selection
+                        using (var brush = new System.Drawing.Drawing2D.LinearGradientBrush(
+                            bgRect, 
+                            Color.FromArgb(60, 130, 180, 255),  // Light blue top
+                            Color.FromArgb(40, 100, 150, 220),  // Darker blue bottom
+                            System.Drawing.Drawing2D.LinearGradientMode.Vertical))
+                        {
+                            g.FillPath(brush, path);
+                        }
+                        // Selection border
+                        using (var pen = new Pen(Color.FromArgb(150, 130, 180, 255), 1.5f))
+                        {
+                            g.DrawPath(pen, path);
+                        }
+                    }
+                }
+                else
+                {
+                    if (isProtected)
+                    {
+                        // Protected game - subtle dark red background
+                        using (var brush = new SolidBrush(Color.FromArgb(50, 35, 35)))
+                        {
+                            g.FillPath(brush, path);
+                        }
+                    }
+                    else
+                    {
+                        // Subtle hover-like background
+                        using (var brush = new SolidBrush(Color.FromArgb(40, 45, 50)))
+                        {
+                            g.FillPath(brush, path);
+                        }
+                    }
+                }
+            }
+
+            // Draw game logo with rounded corners
+            int imageX = bounds.X + padding + 4;
+            int imageY = bounds.Y + (bounds.Height - imageHeight) / 2;
+            var imageRect = new Rectangle(imageX, imageY, imageWidth, imageHeight);
+
+            int imageIndex = info.ImageIndex;
+            if (imageIndex >= 0 && imageIndex < this._LogoImageList.Images.Count)
+            {
+                var image = this._LogoImageList.Images[imageIndex];
+                
+                // Create clipping path for rounded image corners
+                using (var imagePath = CreateRoundedRectPath(imageRect, 4))
+                {
+                    var oldClip = g.Clip;
+                    g.SetClip(imagePath);
+                    g.DrawImage(image, imageRect);
+                    g.Clip = oldClip;
+                }
+                
+                // Draw subtle border around image
+                using (var imagePath = CreateRoundedRectPath(imageRect, 4))
+                using (var pen = new Pen(Color.FromArgb(60, 255, 255, 255), 1f))
+                {
+                    g.DrawPath(pen, imagePath);
+                }
+            }
+
+            // Calculate text area (to the right of image)
+            int textX = imageX + imageWidth + 12;
+            int textWidth = Math.Max(100, bounds.Right - textX - padding - 8);
+            int textY = bounds.Y + (bounds.Height - 44) / 2; // Vertically center the text block
+
+            // Draw game name with proper font (yellow for protected games)
+            Color nameColor = isProtected ? Color.FromArgb(255, 220, 120) : Color.FromArgb(240, 240, 240);
+            string displayName = isProtected ? $"\U0001F512 {info.Name ?? $"App {info.Id}"}" : (info.Name ?? $"App {info.Id}");
+            
+            using (var nameFont = new Font("Segoe UI Semibold", 10f))
+            using (var nameBrush = new SolidBrush(nameColor))
+            {
+                var nameFormat = new StringFormat
+                {
+                    Trimming = StringTrimming.EllipsisCharacter,
+                    FormatFlags = StringFormatFlags.NoWrap,
+                    LineAlignment = StringAlignment.Near
+                };
+
+                var nameRect = new RectangleF(textX, textY, textWidth, 22);
+                g.DrawString(displayName, nameFont, nameBrush, nameRect, nameFormat);
+            }
+
+            // Draw game type/ID as secondary text
+            string subText = $"ID: {info.Id}";
+            Color subColor = Color.FromArgb(140, 140, 140);
+            
+            if (isProtected)
+            {
+                var protectionInfo = info.ProtectionInfo;
+                if (protectionInfo != null)
+                {
+                    subText = $"ID: {info.Id} | \u26A0 Protected ({protectionInfo.ProtectedAchievements} achievements, {protectionInfo.ProtectedStats} stats)";
+                }
+                else
+                {
+                    subText = $"ID: {info.Id} | \u26A0 Protected";
+                }
+                subColor = Color.FromArgb(200, 150, 100); // Orange-ish warning color
+            }
+            
+            using (var subFont = new Font("Segoe UI", 8f))
+            using (var subBrush = new SolidBrush(subColor))
+            {
+                var subRect = new RectangleF(textX, textY + 24, textWidth, 18);
+                g.DrawString(subText, subFont, subBrush, subRect);
+            }
+        }
+
+        /// <summary>
+        /// Creates a GraphicsPath for a rounded rectangle.
+        /// </summary>
+        private static System.Drawing.Drawing2D.GraphicsPath CreateRoundedRectPath(Rectangle rect, int radius)
+        {
+            var path = new System.Drawing.Drawing2D.GraphicsPath();
+            int diameter = radius * 2;
+            
+            path.AddArc(rect.X, rect.Y, diameter, diameter, 180, 90);
+            path.AddArc(rect.Right - diameter, rect.Y, diameter, diameter, 270, 90);
+            path.AddArc(rect.Right - diameter, rect.Bottom - diameter, diameter, diameter, 0, 90);
+            path.AddArc(rect.X, rect.Bottom - diameter, diameter, diameter, 90, 90);
+            path.CloseFigure();
+            
+            return path;
         }
 
         // Window resize constants for custom title bar
@@ -1283,6 +1498,12 @@ namespace SAM.Picker
                 this._GameListView.Location = new Point(border, contentTop);
                 this._GameListView.Width = this.ClientSize.Width - (border * 2);
                 this._GameListView.Height = Math.Max(50, this.ClientSize.Height - contentTop - border);
+                
+                // Update column width to fill the ListView (for Details view)
+                if (this._GameListView.Columns.Count > 0)
+                {
+                    this._GameListView.Columns[0].Width = this._GameListView.ClientSize.Width;
+                }
                 
                 // Hide native scrollbar after resize
                 HideNativeScrollBar();

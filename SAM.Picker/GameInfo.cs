@@ -43,6 +43,23 @@ namespace SAM.Picker
 
         public ListViewItem Item;
 
+        /// <summary>
+        /// Gets the protection info for this game from cache.
+        /// Returns null if the game hasn't been analyzed yet.
+        /// </summary>
+        public API.ProtectionCache.ProtectionInfo ProtectionInfo => API.ProtectionCache.GetProtectionInfo(this.Id);
+
+        /// <summary>
+        /// Indicates if this game has protected achievements/stats.
+        /// Returns true if protected, false if not protected, false if unknown.
+        /// </summary>
+        public bool IsProtected => API.ProtectionCache.HasProtection(this.Id) ?? false;
+
+        /// <summary>
+        /// Indicates if we know the protection status of this game.
+        /// </summary>
+        public bool HasProtectionInfo => API.ProtectionCache.GetProtectionInfo(this.Id) != null;
+
         public GameInfo(uint id, string type)
         {
             this.Id = id;

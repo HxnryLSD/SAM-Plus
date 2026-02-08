@@ -63,6 +63,7 @@ namespace SAM.Game
         private readonly API.StoreTitleBar _titleBar;
         private readonly API.StoreScrollBar _achievementScrollBar;
         private readonly Label _infoLabel;
+        private bool _hasProtectedStats = false;
 
         private static System.Net.Http.HttpClient HttpClient => API.ServiceLocator.HttpClient;
         private bool _isDownloadingIcons = false; // Added flag
@@ -673,6 +674,9 @@ namespace SAM.Game
             UpdateAchievementScrollBar();
             HideNativeScrollBar();
             
+            // Check for protected achievements/stats based on Steam schema
+            CheckForProtectedStats();
+            
             this.EnableInput();
         }
 
@@ -694,6 +698,70 @@ namespace SAM.Game
 
             this._GameStatusLabel.Text = "Retrieving stat information...";
             this.DisableInput();
+        }
+
+        /// <summary>
+        /// Checks if any achievements or stats have the Protected permission flag set.
+        /// This is based on Steam's schema, not external detection.
+        /// </summary>
+        private void CheckForProtectedStats()
+        {
+            _hasProtectedStats = false;
+            int protectedAchievements = 0;
+            int protectedStats = 0;
+
+            // Check achievements for protected flag (permission & 2)
+            foreach (var achievement in this._AchievementDefinitions)
+            {
+                if ((achievement.Permission & 2) != 0)
+                {
+                    protectedAchievements++;
+                }
+            }
+
+            // Check stats for protected flag (permission & 2)
+            foreach (var stat in this._StatDefinitions)
+            {
+                if ((stat.Permission & 2) != 0)
+                {
+                    protectedStats++;
+                }
+            }
+
+            // Update protection cache for Game Picker to use
+            API.ProtectionCache.UpdateProtectionStatus(
+                (uint)this._GameId,
+                protectedAchievements,
+                protectedStats,
+                this._AchievementDefinitions.Count,
+                this._StatDefinitions.Count);
+
+            _hasProtectedStats = protectedAchievements > 0 || protectedStats > 0;
+
+            if (_hasProtectedStats)
+            {
+                // Show warning in info label
+                if (_infoLabel != null)
+                {
+                    _infoLabel.Text = $"⚠️ {protectedAchievements} protected";
+                    _infoLabel.ForeColor = Color.FromArgb(255, 193, 7);
+                }
+
+                // Update status
+                this._GameStatusLabel.Text = $"Retrieved {this._AchievementListView.Items.Count} achievements ({protectedAchievements} protected) and {this._StatisticsDataGridView.Rows.Count} statistics ({protectedStats} protected).";
+
+                // Show one-time warning
+                MessageBox.Show(
+                    this,
+                    $"This game has protected achievements/stats:\n\n" +
+                    $"• {protectedAchievements} protected achievements\n" +
+                    $"• {protectedStats} protected statistics\n\n" +
+                    "Protected items cannot be modified. Steam's servers will reject any changes to these items.\n\n" +
+                    "You can still modify unprotected items.",
+                    "⚠️ Protected Stats Detected",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
         }
 
         private bool _IsUpdatingAchievementList;
@@ -773,19 +841,23 @@ namespace SAM.Game
                     Checked = isAchieved,
                     Tag = info,
                     Text = info.Name,
-                    BackColor = (def.Permission & 3) == 0 ? Color.Black : Color.FromArgb(64, 0, 0),
+                    BackColor = (def.Permission & 2) == 0 ? Color.Black : Color.FromArgb(64, 0, 0),
+                    ForeColor = (def.Permission & 2) == 0 ? Color.White : Color.FromArgb(255, 193, 7),
                 };
 
                 info.Item = item;
 
+                // Mark protected achievements in name
+                bool isProtected = (def.Permission & 2) != 0;
                 if (item.Text.StartsWith("#", StringComparison.InvariantCulture) == true)
                 {
-                    item.Text = info.Id;
-                    item.SubItems.Add("");
+                    item.Text = isProtected ? $"🔒 {info.Id}" : info.Id;
+                    item.SubItems.Add(isProtected ? "[PROTECTED]" : "");
                 }
                 else
                 {
-                    item.SubItems.Add(info.Description);
+                    item.Text = isProtected ? $"🔒 {info.Name}" : info.Name;
+                    item.SubItems.Add(isProtected ? $"[PROTECTED] {info.Description}" : info.Description);
                 }
 
                 item.SubItems.Add(info.UnlockTime.HasValue == true
@@ -1035,6 +1107,25 @@ namespace SAM.Game
 
         private void OnStore(object sender, EventArgs e)
         {
+            // Show warning if protected stats exist
+            if (_hasProtectedStats)
+            {
+                var result = MessageBox.Show(
+                    this,
+                    "This game has protected achievements/stats that cannot be modified.\n\n" +
+                    "Any changes to protected items will be rejected by Steam's servers.\n" +
+                    "Unprotected items can still be saved.\n\n" +
+                    "Do you want to continue?",
+                    "⚠️ Protected Stats Warning",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning);
+
+                if (result != DialogResult.Yes)
+                {
+                    return;
+                }
+            }
+
             int achievements = this.StoreAchievements();
             if (achievements < 0)
             {
