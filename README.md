@@ -41,6 +41,12 @@
 - Supports integer and float values
 - Save changes with one click
 
+### 🛡️ Protection Detection
+- **Automatic detection** of protected achievements/stats via Steam schema
+- **Visual warnings** in Game Picker (🔒 icon, colored background)
+- **Detailed info** showing protected achievement and stat counts
+- **Modification blocking** for protected items to prevent issues
+
 ### ⚡ Performance
 - **.NET 8.0** – faster than .NET Framework
 - **Async Icon Loading** – no UI freezes
@@ -90,7 +96,11 @@ dotnet publish -c Release -r win-x86 --self-contained false
 4. In the Achievement Manager:
    - ✅ Checkbox = Unlock achievement
    - ❌ Checkbox = Reset achievement
+   - **Lock All** = Reset all achievements at once
+   - **Unlock All** = Unlock all achievements at once
    - Click **Commit** to save changes
+
+> 💡 **Tip:** Games with protected achievements are marked with a 🔒 icon in the Game Picker. Protected items cannot be modified.
 
 ### Keyboard Shortcuts
 
@@ -109,9 +119,10 @@ SAM-Plus/
 ├── SAM.API/                 # Steam API Wrapper
 │   ├── Client.cs            # Main client for Steam communication
 │   ├── NativeWrapper.cs     # P/Invoke for steam_api.dll
-│   ├── StoreThemeColors.cs  # Dark Theme color definitions
+│   ├── ThemeManager.cs      # Dark Theme color definitions
 │   ├── StoreTitleBar.cs     # Custom Borderless Title Bar
 │   ├── StoreScrollBar.cs    # Custom Dark Scrollbar
+│   ├── ProtectionCache.cs   # Cache for protected games detection
 │   └── Wrappers/            # Interface wrappers for Steam APIs
 │
 ├── SAM.Game/                # Achievement Manager
@@ -140,6 +151,12 @@ SAM-Plus/
 - Callbacks for achievement updates
 - Icon download via Steam CDN
 
+### Protection Detection
+- Reads Steam's local schema files (`UserGameStatsSchema_{GameId}.bin`)
+- Checks `permission` flag on achievements and stats (`permission & 2` = protected)
+- Caches results in `%LocalAppData%/SAM-Plus/Cache/protection_cache.json`
+- Visual indicators in Game Picker and Manager for protected items
+
 ### Changes Compared to Original SAM
 | Area | Original | SAM-Plus |
 |------|----------|----------|
@@ -148,14 +165,17 @@ SAM-Plus/
 | UI | Standard WinForms | Custom Dark Theme |
 | Icons | Sync Download | Async Parallel |
 | Window | Standard Border | Borderless Custom |
+| Protection | None | Schema-based Detection |
 
 ---
 
 ## 📝 Known Limitations
 
 - **VAC-protected games:** Changes may result in VAC bans
-- **Server-side achievements:** Some achievements are validated server-side
-- **Online statistics:** Changes may be reset in online games
+- **Server-side achievements:** Some achievements are validated server-side and cannot be unlocked client-side
+- **Online statistics:** Changes may be reset when connecting to game servers
+- **Protected achievements:** Some games have achievements protected by Steam's permission system – SAM-Plus detects and blocks these automatically
+- **Protection cache:** Protected game indicators in the Game Picker only appear after opening the game at least once in the Manager
 
 > ⚠️ **Disclaimer:** Use at your own risk. The developers assume no responsibility for account bans or other consequences.
 
@@ -163,7 +183,9 @@ SAM-Plus/
 
 ## 📜 License
 
-This project is licensed under the terms in [LICENSE.txt](LICENSE.txt).
+This project is licensed under the **zlib License** – see [LICENSE.txt](LICENSE.txt) for details.
+
+SAM-Plus is a modified and enhanced fork of the original Steam Achievement Manager.
 
 ### Attributions
 
