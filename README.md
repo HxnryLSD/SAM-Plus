@@ -36,6 +36,14 @@ SAM 8.0 uses a **two-application architecture** to solve Steam's AppID binding i
 
 ---
 
+## 🖼️ App Preview
+
+![SAM.WinUI (Game Picker)](preview/SAM.WinUI_5mNJIKErBB.webp)
+
+![SAM.Manager (Achievement Manager)](preview/SAM.Manager_NZ88EwtwnN.webp)
+
+---
+
 ## 📥 Downloads
 
 | Version | Download | Description |
