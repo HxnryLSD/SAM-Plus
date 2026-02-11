@@ -88,6 +88,16 @@ public interface ISettingsService
     string ImageCachePath { get; }
 
     /// <summary>
+    /// Gets or sets the image cache max size in bytes.
+    /// </summary>
+    long ImageCacheMaxSizeBytes { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether offline mode is allowed when network is unavailable.
+    /// </summary>
+    bool EnableOfflineMode { get; set; }
+
+    /// <summary>
     /// Loads settings from storage.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>

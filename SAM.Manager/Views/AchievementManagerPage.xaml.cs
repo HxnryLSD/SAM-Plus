@@ -22,6 +22,7 @@
 
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
 using SAM.Core.Models;
 using SAM.Core.Services;
@@ -249,7 +250,7 @@ public sealed partial class AchievementManagerPage : Page
             await ViewModel.InitializeCommand.ExecuteAsync((long)gameId);
             
             Log.Info($"InitializeCommand completed. Achievements count: {ViewModel.Achievements.Count}");
-            Log.Debug($"FilteredAchievements count: {ViewModel.FilteredAchievements.Count}");
+            Log.Debug($"FilteredAchievements total count: {ViewModel.FilteredTotalCount}");
             Log.Debug($"GameName: {ViewModel.GameName}");
             Log.Debug($"HasError: {ViewModel.HasError}");
             Log.Debug($"ErrorMessage: {ViewModel.ErrorMessage}");
@@ -286,6 +287,78 @@ public sealed partial class AchievementManagerPage : Page
         }
         
         Log.MethodExit();
+    }
+
+    private void AchievementsListView_ContainerContentChanging(ListViewBase sender, ContainerContentChangingEventArgs args)
+    {
+        if (args.InRecycleQueue)
+        {
+            if (args.ItemContainer.ContentTemplateRoot is FrameworkElement recycledRoot)
+            {
+                var recycledImage = recycledRoot.FindName("AchievementIconImage") as Image;
+                var recycledPlaceholder = recycledRoot.FindName("AchievementIconPlaceholder") as FrameworkElement;
+                if (recycledImage is not null)
+                {
+                    recycledImage.Source = null;
+                    recycledImage.Opacity = 0;
+                }
+
+                if (recycledPlaceholder is not null)
+                {
+                    recycledPlaceholder.Visibility = Visibility.Visible;
+                }
+            }
+
+            return;
+        }
+
+        if (args.ItemContainer.ContentTemplateRoot is not FrameworkElement root || args.Item is not AchievementModel achievement)
+        {
+            return;
+        }
+
+        var image = root.FindName("AchievementIconImage") as Image;
+        var placeholder = root.FindName("AchievementIconPlaceholder") as FrameworkElement;
+        if (image is null)
+        {
+            return;
+        }
+
+        image.Source = null;
+        image.Opacity = 0;
+        if (placeholder is not null)
+        {
+            placeholder.Visibility = Visibility.Visible;
+        }
+
+        if (string.IsNullOrWhiteSpace(achievement.CurrentIconUrl))
+        {
+            return;
+        }
+
+        var bitmap = new BitmapImage(new Uri(achievement.CurrentIconUrl))
+        {
+            DecodePixelWidth = 64
+        };
+        image.Source = bitmap;
+    }
+
+    private void AchievementIcon_ImageOpened(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Image image)
+        {
+            return;
+        }
+
+        image.Opacity = 1;
+        if (image.Parent is FrameworkElement parent)
+        {
+            var placeholder = parent.FindName("AchievementIconPlaceholder") as FrameworkElement;
+            if (placeholder is not null)
+            {
+                placeholder.Visibility = Visibility.Collapsed;
+            }
+        }
     }
 
     private void SearchBox_TextChanged(AutoSuggestBox sender, AutoSuggestBoxTextChangedEventArgs args)

@@ -46,8 +46,22 @@ internal record CacheMetadata
 /// </summary>
 public class ImageCacheService : IImageCacheService
 {
+    private sealed class MemoryCacheEntry
+    {
+        public WeakReference<byte[]> DataRef { get; }
+        public DateTime LastAccess { get; set; }
+        public long SizeBytes { get; }
+
+        public MemoryCacheEntry(byte[] data)
+        {
+            DataRef = new WeakReference<byte[]>(data);
+            LastAccess = DateTime.UtcNow;
+            SizeBytes = data.Length;
+        }
+    }
+
     private readonly HttpClient _httpClient;
-    private readonly ConcurrentDictionary<string, (byte[] Data, DateTime LastAccess)> _memoryCache = new();
+    private readonly ConcurrentDictionary<string, MemoryCacheEntry> _memoryCache = new();
     private readonly ConcurrentDictionary<string, CacheMetadata> _metadataCache = new();
     private readonly string _coverCacheDirectory;
     private readonly string _widecoverCacheDirectory;
@@ -80,6 +94,11 @@ public class ImageCacheService : IImageCacheService
     {
         ArgumentNullException.ThrowIfNull(httpClient);
         _httpClient = httpClient;
+
+        if (settingsService is not null && settingsService.ImageCacheMaxSizeBytes > 0)
+        {
+            MaxCacheSizeBytes = settingsService.ImageCacheMaxSizeBytes;
+        }
         
         // Migrate legacy ImageCache folder to new structure
         AppPaths.MigrateLegacyImageCache();
@@ -109,9 +128,13 @@ public class ImageCacheService : IImageCacheService
         // Check memory cache first
         if (_memoryCache.TryGetValue(optimizedUrl, out var cached))
         {
-            // Update last access time
-            _memoryCache[optimizedUrl] = (cached.Data, DateTime.UtcNow);
-            return cached.Data;
+            if (cached.DataRef.TryGetTarget(out var data))
+            {
+                cached.LastAccess = DateTime.UtcNow;
+                return data;
+            }
+
+            _memoryCache.TryRemove(optimizedUrl, out _);
         }
 
         // Determine cache directory based on URL type
@@ -414,24 +437,26 @@ public class ImageCacheService : IImageCacheService
 
     private void AddToMemoryCache(string url, byte[] data)
     {
+        RemoveDeadMemoryEntries();
         // Only cache in memory if it fits
-        var currentMemorySize = _memoryCache.Values.Sum(v => (long)v.Data.Length);
+        var currentMemorySize = GetLiveMemoryCacheSize();
         
         if (currentMemorySize + data.Length <= MaxMemoryCacheSizeBytes)
         {
-            _memoryCache.TryAdd(url, (data, DateTime.UtcNow));
+            _memoryCache[url] = new MemoryCacheEntry(data);
         }
         else
         {
             // Evict oldest memory entries to make room
             EvictMemoryCache(data.Length);
-            _memoryCache.TryAdd(url, (data, DateTime.UtcNow));
+            _memoryCache[url] = new MemoryCacheEntry(data);
         }
     }
 
     private void EvictMemoryCache(long neededBytes)
     {
-        var currentSize = _memoryCache.Values.Sum(v => (long)v.Data.Length);
+        RemoveDeadMemoryEntries();
+        var currentSize = GetLiveMemoryCacheSize();
         var targetSize = MaxMemoryCacheSizeBytes - neededBytes;
 
         if (currentSize <= targetSize) return;
@@ -440,7 +465,7 @@ public class ImageCacheService : IImageCacheService
             .OrderBy(kv => kv.Value.LastAccess)
             .TakeWhile(kv =>
             {
-                currentSize -= kv.Value.Data.Length;
+                currentSize -= kv.Value.SizeBytes;
                 return currentSize > targetSize;
             })
             .Select(kv => kv.Key)
@@ -450,6 +475,31 @@ public class ImageCacheService : IImageCacheService
         {
             _memoryCache.TryRemove(key, out _);
         }
+    }
+
+    private void RemoveDeadMemoryEntries()
+    {
+        foreach (var entry in _memoryCache)
+        {
+            if (!entry.Value.DataRef.TryGetTarget(out _))
+            {
+                _memoryCache.TryRemove(entry.Key, out _);
+            }
+        }
+    }
+
+    private long GetLiveMemoryCacheSize()
+    {
+        long size = 0;
+        foreach (var entry in _memoryCache.Values)
+        {
+            if (entry.DataRef.TryGetTarget(out _))
+            {
+                size += entry.SizeBytes;
+            }
+        }
+
+        return size;
     }
 
     public void ClearCache()
@@ -483,7 +533,7 @@ public class ImageCacheService : IImageCacheService
 
     public bool IsCached(string url)
     {
-        if (_memoryCache.ContainsKey(url))
+        if (_memoryCache.TryGetValue(url, out var cached) && cached.DataRef.TryGetTarget(out _))
         {
             return true;
         }
@@ -496,7 +546,8 @@ public class ImageCacheService : IImageCacheService
 
     public ImageCacheStatistics GetStatistics()
     {
-        var memorySize = _memoryCache.Values.Sum(v => (long)v.Data.Length);
+        RemoveDeadMemoryEntries();
+        var memorySize = GetLiveMemoryCacheSize();
         
         return new ImageCacheStatistics
         {

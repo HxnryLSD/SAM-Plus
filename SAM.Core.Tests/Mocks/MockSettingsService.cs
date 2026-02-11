@@ -41,6 +41,8 @@ public class MockSettingsService : ISettingsService
     public bool UseSystemAccentColor { get; set; } = true;
     public string AccentColor { get; set; } = "#FF0078D4";
     public string ImageCachePath { get; set; } = Path.Combine(Path.GetTempPath(), "SAM.Tests", "ImageCache");
+    public long ImageCacheMaxSizeBytes { get; set; } = 100 * 1024 * 1024;
+    public bool EnableOfflineMode { get; set; } = true;
 
     public bool LoadAsyncCalled { get; private set; }
     public bool SaveAsyncCalled { get; private set; }
@@ -72,5 +74,7 @@ public class MockSettingsService : ISettingsService
         AutoUpdateEnabled = true;
         UseSystemAccentColor = true;
         AccentColor = "#FF0078D4";
+        ImageCacheMaxSizeBytes = 100 * 1024 * 1024;
+        EnableOfflineMode = true;
     }
 }

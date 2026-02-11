@@ -21,6 +21,7 @@
  */
 
 using System.Collections.ObjectModel;
+using System.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SAM.Core.Models;
@@ -33,10 +34,13 @@ namespace SAM.Core.ViewModels;
 /// </summary>
 public partial class AchievementManagerViewModel : ViewModelBase
 {
+    private const int PageSize = 100;
     private readonly IAchievementService _achievementService;
     private readonly IImageCacheService _imageCacheService;
     private readonly IUserDataService _userDataService;
     private readonly ISteamService _steamService;
+    private List<AchievementModel> _filteredList = [];
+    private CancellationTokenSource? _prefetchCancellation;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HeaderImageUrl))]
@@ -59,12 +63,26 @@ public partial class AchievementManagerViewModel : ViewModelBase
     private ObservableCollection<AchievementModel> _filteredAchievements = [];
 
     [ObservableProperty]
+    private int _filteredTotalCount;
+
+    [ObservableProperty]
+    private int _currentPage;
+
+    [ObservableProperty]
+    private int _totalPages;
+
+    [ObservableProperty]
     private ObservableCollection<StatModel> _statistics = [];
 
     /// <summary>
     /// Gets the statistics collection (alias for Statistics property).
     /// </summary>
     public IEnumerable<StatModel> Stats => Statistics;
+
+    public bool CanGoPrevious => CurrentPage > 0;
+    public bool CanGoNext => CurrentPage + 1 < TotalPages;
+    public bool IsPagingEnabled => TotalPages > 1;
+    public string PageDisplay => TotalPages == 0 ? "0/0" : $"{CurrentPage + 1}/{TotalPages}";
 
     [ObservableProperty]
     private AchievementModel? _selectedAchievement;
@@ -121,12 +139,22 @@ public partial class AchievementManagerViewModel : ViewModelBase
 
     partial void OnSearchTextChanged(string value)
     {
+        CurrentPage = 0;
         ApplyFilter();
     }
 
     partial void OnFilterTypeChanged(AchievementFilterType value)
     {
+        CurrentPage = 0;
         ApplyFilter();
+    }
+
+    partial void OnCurrentPageChanged(int value)
+    {
+        UpdatePagedAchievements();
+        OnPropertyChanged(nameof(CanGoPrevious));
+        OnPropertyChanged(nameof(CanGoNext));
+        OnPropertyChanged(nameof(PageDisplay));
     }
 
     [RelayCommand]
@@ -337,6 +365,24 @@ public partial class AchievementManagerViewModel : ViewModelBase
         });
     }
 
+    [RelayCommand]
+    private void NextPage()
+    {
+        if (CanGoNext)
+        {
+            CurrentPage++;
+        }
+    }
+
+    [RelayCommand]
+    private void PreviousPage()
+    {
+        if (CanGoPrevious)
+        {
+            CurrentPage--;
+        }
+    }
+
     private void ApplyFilter()
     {
         var filtered = Achievements.AsEnumerable();
@@ -359,7 +405,82 @@ public partial class AchievementManagerViewModel : ViewModelBase
             _ => filtered
         };
 
-        FilteredAchievements = new ObservableCollection<AchievementModel>(filtered);
+        _filteredList = filtered.ToList();
+        FilteredTotalCount = _filteredList.Count;
+        TotalPages = _filteredList.Count == 0
+            ? 0
+            : (int)Math.Ceiling(_filteredList.Count / (double)PageSize);
+
+        if (TotalPages == 0)
+        {
+            CurrentPage = 0;
+        }
+        else if (CurrentPage >= TotalPages)
+        {
+            CurrentPage = TotalPages - 1;
+        }
+
+        UpdatePagedAchievements();
+        OnPropertyChanged(nameof(IsPagingEnabled));
+        OnPropertyChanged(nameof(PageDisplay));
+        OnPropertyChanged(nameof(CanGoPrevious));
+        OnPropertyChanged(nameof(CanGoNext));
+    }
+
+    private void UpdatePagedAchievements()
+    {
+        if (_filteredList.Count == 0 || TotalPages == 0)
+        {
+            FilteredAchievements = [];
+            return;
+        }
+
+        var pageIndex = Math.Clamp(CurrentPage, 0, TotalPages - 1);
+        var pageItems = _filteredList
+            .Skip(pageIndex * PageSize)
+            .Take(PageSize)
+            .ToList();
+
+        FilteredAchievements = new ObservableCollection<AchievementModel>(pageItems);
+        _ = PrefetchNextPageAsync(pageIndex + 1);
+    }
+
+    private async Task PrefetchNextPageAsync(int nextPageIndex)
+    {
+        if (nextPageIndex >= TotalPages || _filteredList.Count == 0)
+        {
+            return;
+        }
+
+        _prefetchCancellation?.Cancel();
+        _prefetchCancellation = new CancellationTokenSource();
+
+        var token = _prefetchCancellation.Token;
+        var urls = _filteredList
+            .Skip(nextPageIndex * PageSize)
+            .Take(PageSize)
+            .Select(a => a.CurrentIconUrl)
+            .Where(url => !string.IsNullOrWhiteSpace(url))
+            .Cast<string>()
+            .ToList();
+
+        if (urls.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            await _imageCacheService.GetImagesAsync(urls, maxParallelism: 6, cancellationToken: token);
+        }
+        catch (OperationCanceledException)
+        {
+            // Ignore cancellations when the user changes pages or filters.
+        }
+        catch (Exception ex)
+        {
+            Log.Warn($"PrefetchNextPageAsync failed: {ex.Message}");
+        }
     }
 
     private void UpdateStats()

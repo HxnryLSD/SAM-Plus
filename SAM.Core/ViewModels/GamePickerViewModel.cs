@@ -22,6 +22,7 @@
 
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SAM.Core.Models;
@@ -34,10 +35,14 @@ namespace SAM.Core.ViewModels;
 /// </summary>
 public partial class GamePickerViewModel : ViewModelBase
 {
+    private const int InitialLoadCount = 50;
+    private const int BatchLoadCount = 50;
     private readonly Func<ISteamService> _steamServiceFactory;
     private readonly Func<IImageCacheService> _imageCacheServiceFactory;
     private readonly Func<IUserDataService> _userDataServiceFactory;
     private readonly Func<IGameCacheService> _gameCacheServiceFactory;
+    private readonly ISettingsService _settingsService;
+    private readonly SynchronizationContext? _syncContext;
     private ISteamService? _steamService;
     private IImageCacheService? _imageCacheService;
     private IUserDataService? _userDataService;
@@ -74,12 +79,15 @@ public partial class GamePickerViewModel : ViewModelBase
         Func<ISteamService> steamServiceFactory,
         Func<IImageCacheService> imageCacheServiceFactory,
         Func<IUserDataService> userDataServiceFactory,
-        Func<IGameCacheService> gameCacheServiceFactory)
+        Func<IGameCacheService> gameCacheServiceFactory,
+        ISettingsService settingsService)
     {
         _steamServiceFactory = steamServiceFactory;
         _imageCacheServiceFactory = imageCacheServiceFactory;
         _userDataServiceFactory = userDataServiceFactory;
         _gameCacheServiceFactory = gameCacheServiceFactory;
+        _settingsService = settingsService;
+        _syncContext = SynchronizationContext.Current;
     }
 
     private ISteamService SteamService => _steamService ??= _steamServiceFactory();
@@ -143,7 +151,25 @@ public partial class GamePickerViewModel : ViewModelBase
                 var savedUserData = await UserDataService.GetAllGameDataAsync(ct);
                 Log.Info($"Loaded saved data for {savedUserData.Count} games");
 
-                var games = (await SteamService.GetOwnedGamesAsync(ct)).ToList();
+                List<GameModel> games;
+                try
+                {
+                    games = (await SteamService.GetOwnedGamesAsync(ct)).ToList();
+                }
+                catch (Exception ex)
+                {
+                    if (_settingsService.EnableOfflineMode)
+                    {
+                        Log.Warn($"Failed to load games from Steam, falling back to cache: {ex.Message}");
+                        var loadedFromCache = await TryLoadCachedGamesAsync(ct);
+                        if (loadedFromCache)
+                        {
+                            return;
+                        }
+                    }
+
+                    throw;
+                }
 
                 // Merge saved user data with game list
                 foreach (var game in games)
@@ -166,8 +192,7 @@ public partial class GamePickerViewModel : ViewModelBase
                     }
                 }
 
-                Games = new ObservableCollection<GameModel>(games);
-                ApplyFilter();
+                await LoadGamesInBatchesAsync(games, ct);
                 HasCachedGames = false;
 
                 await SaveGamesToCacheAsync(games, savedUserData, steamId, ct);
@@ -239,6 +264,73 @@ public partial class GamePickerViewModel : ViewModelBase
         };
 
         FilteredGames = new ObservableCollection<GameModel>(filtered);
+    }
+
+    private async Task LoadGamesInBatchesAsync(IReadOnlyList<GameModel> games, CancellationToken cancellationToken)
+    {
+        if (games.Count == 0)
+        {
+            await RunOnUiAsync(() =>
+            {
+                Games = [];
+                FilteredGames = [];
+            });
+            return;
+        }
+
+        var initial = games.Take(InitialLoadCount).ToList();
+        await RunOnUiAsync(() =>
+        {
+            Games = new ObservableCollection<GameModel>(initial);
+            ApplyFilter();
+        });
+
+        if (games.Count <= InitialLoadCount)
+        {
+            return;
+        }
+
+        for (var i = InitialLoadCount; i < games.Count; i += BatchLoadCount)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var batch = games.Skip(i).Take(BatchLoadCount).ToList();
+            await RunOnUiAsync(() =>
+            {
+                foreach (var game in batch)
+                {
+                    Games.Add(game);
+                }
+
+                ApplyFilter();
+            });
+
+            await Task.Yield();
+        }
+    }
+
+    private Task RunOnUiAsync(Action action)
+    {
+        if (_syncContext is null)
+        {
+            action();
+            return Task.CompletedTask;
+        }
+
+        var tcs = new TaskCompletionSource();
+        _syncContext.Post(_ =>
+        {
+            try
+            {
+                action();
+                tcs.SetResult();
+            }
+            catch (Exception ex)
+            {
+                tcs.SetException(ex);
+            }
+        }, null);
+
+        return tcs.Task;
     }
 
     private static GameModel CreateGameModelFromCache(CachedGameInfo cached)

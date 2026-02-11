@@ -9,7 +9,7 @@
 | 🔴 **P1** | Concrete Cast / Interface-Leaking beheben | Niedrig | Offen |
 | 🔴 **P1** | Code-Duplikation eliminieren (Converters, Schema) | Mittel | Offen |
 | 🔴 **P1** | Hardcoded Strings → Lokalisierung | Mittel | Offen |
-| � **P1** | Tests: Tier 1 — Pure Logic (SteamErrorHelper, Loc, VM) | Niedrig | Offen |
+| 🟡 **P1** | Tests: Tier 1 — Pure Logic (SteamErrorHelper, Loc, VM) | Niedrig | Offen |
 | 🟡 **P2** | God Classes aufbrechen (DiagnosticsPage, SettingsPage) | Hoch | Offen |
 | 🟡 **P2** | Code-Behind ausdünnen → ViewModels | Hoch | Offen |
 | 🟡 **P2** | async void / ungenutzte Services bereinigen | Niedrig | Offen |
@@ -295,25 +295,25 @@
 - [x] **Cached Game List** — Letzte Spieleliste aus SQLite, im Hintergrund aktualisieren
 
 ### Game Picker Performance
-- [ ] **ItemsRepeater** mit Virtualisierung für große Bibliotheken (>500 Spiele)
-- [ ] **Inkrementelles Laden** — Erste 50 Spiele sofort, Rest im Hintergrund
-- [ ] **Image Lazy Loading** — Icons erst laden wenn sichtbar
-- [ ] **Placeholder-Images** — Generische Icons während Ladevorgang
+- [x] **ItemsRepeater** mit Virtualisierung für große Bibliotheken (>500 Spiele)
+- [x] **Inkrementelles Laden** — Erste 50 Spiele sofort, Rest im Hintergrund
+- [x] **Image Lazy Loading** — Icons erst laden wenn sichtbar
+- [x] **Placeholder-Images** — Generische Icons während Ladevorgang
 
 ### Achievement Manager Performance
-- [ ] **Pagination** — Bei >100 Achievements paginieren
-- [ ] **Deferred Icon Loading** — Achievement-Icons erst bei Scroll laden
-- [ ] **Background Prefetch** — Nächste Seite im Hintergrund vorladen
+- [x] **Pagination** — Bei >100 Achievements paginieren
+- [x] **Deferred Icon Loading** — Achievement-Icons erst bei Scroll laden
+- [x] **Background Prefetch** — Nächste Seite im Hintergrund vorladen
 
 ### Memory-Optimierung
-- [ ] **Image Disposal** — Nicht sichtbare Bilder aus Memory entfernen
-- [ ] **WeakReference Cache** — Bilder bei Memory-Druck freigeben
-- [ ] **Object Pooling** — ViewModels wiederverwenden statt neu erstellen
+- [x] **Image Disposal** — Nicht sichtbare Bilder aus Memory entfernen
+- [x] **WeakReference Cache** — Bilder bei Memory-Druck freigeben
+- [x] **Object Pooling** — ViewModels wiederverwenden statt neu erstellen
 
 ### Caching-Erweiterungen
-- [ ] **Offline-Modus** — App mit Cache-Daten nutzbar wenn Steam läuft aber kein Internet
-- [ ] **Cache-Verwaltung** — UI zum Anzeigen und Löschen von Cache-Daten
-- [ ] **Cache-Größe konfigurierbar** — Benutzerdefiniertes Limit für Icon-Cache
+- [x] **Offline-Modus** — App mit Cache-Daten nutzbar wenn Steam läuft aber kein Internet
+- [x] **Cache-Verwaltung** — UI zum Anzeigen und Löschen von Cache-Daten
+- [x] **Cache-Größe konfigurierbar** — Benutzerdefiniertes Limit für Icon-Cache
 
 ### Messbare Ziele
 | Metrik | Ziel |

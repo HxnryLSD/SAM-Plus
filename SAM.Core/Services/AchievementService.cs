@@ -41,6 +41,7 @@ public class AchievementService : IAchievementService
     
     private readonly List<AchievementDefinition> _achievementDefinitions = [];
     private readonly List<StatDefinition> _statDefinitions = [];
+    private readonly Dictionary<string, AchievementModel> _achievementPool = new(StringComparer.Ordinal);
 
     public bool IsReady => _isReady;
     public long GameId => _gameId;
@@ -290,20 +291,23 @@ public class AchievementService : IAchievementService
                 continue;
             }
 
-            var achievement = new AchievementModel
+            if (!_achievementPool.TryGetValue(def.Id, out var achievement))
             {
-                Id = def.Id,
-                Name = def.Name.StartsWith("#") ? def.Id : def.Name,
-                Description = def.Description,
-                IsUnlocked = isAchieved,
-                UnlockTime = isAchieved && unlockTime > 0 
-                    ? DateTimeOffset.FromUnixTimeSeconds(unlockTime).LocalDateTime 
-                    : null,
-                IconUrl = $"https://cdn.steamstatic.com/steamcommunity/public/images/apps/{_gameId}/{(isAchieved ? def.IconNormal : def.IconLocked)}",
-                IconLockedUrl = $"https://cdn.steamstatic.com/steamcommunity/public/images/apps/{_gameId}/{def.IconLocked}",
-                IsHidden = def.IsHidden,
-                IsProtected = (def.Permission & 3) != 0,
-            };
+                achievement = new AchievementModel { Id = def.Id };
+                _achievementPool[def.Id] = achievement;
+            }
+
+            achievement.Name = def.Name.StartsWith("#") ? def.Id : def.Name;
+            achievement.Description = def.Description;
+            achievement.IsUnlocked = isAchieved;
+            achievement.UnlockTime = isAchieved && unlockTime > 0 
+                ? DateTimeOffset.FromUnixTimeSeconds(unlockTime).LocalDateTime 
+                : null;
+            achievement.IconUrl = $"https://cdn.steamstatic.com/steamcommunity/public/images/apps/{_gameId}/{(isAchieved ? def.IconNormal : def.IconLocked)}";
+            achievement.IconLockedUrl = $"https://cdn.steamstatic.com/steamcommunity/public/images/apps/{_gameId}/{def.IconLocked}";
+            achievement.IsHidden = def.IsHidden;
+            achievement.IsProtected = (def.Permission & 3) != 0;
+            achievement.IsModified = false;
 
             achievements.Add(achievement);
         }

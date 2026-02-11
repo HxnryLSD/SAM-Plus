@@ -16,7 +16,8 @@
                   CornerRadius="8"
                   BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                   BorderThickness="1"
-                  Padding="0">
+                  Padding="0"
+                  Tapped="GameItem_Tapped">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
@@ -24,9 +25,21 @@
 
                 <!-- Game Logo/Image -->
                 <Border Grid.RowSpan="2" CornerRadius="8">
-                    <Image Source="{x:Bind ImageUrl, Mode=OneTime}" 
-                           Stretch="UniformToFill"
-                           HorizontalAlignment="Center"/>
+                    <Grid>
+                        <Grid x:Name="ImagePlaceholder"
+                              Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                            <FontIcon Glyph="&#xE7C3;"
+                                      FontSize="28"
+                                      Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"/>
+                        </Grid>
+                        <Image x:Name="GameImage"
+                               Stretch="UniformToFill"
+                               HorizontalAlignment="Center"
+                               Opacity="0"
+                               ImageOpened="GameImage_ImageOpened"/>
+                    </Grid>
                 </Border>
                 
                 <!-- Gradient overlay -->
@@ -95,7 +108,8 @@
             <Grid Height="40" 
                   Padding="8,4"
                   CornerRadius="4"
-                  Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                  Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                  Tapped="GameItem_Tapped">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="32"/>
                     <ColumnDefinition Width="*"/>
@@ -105,8 +119,22 @@
 
                 <!-- Small Game Icon -->
                 <Border CornerRadius="4" Width="32" Height="32">
-                    <Image Source="{x:Bind ImageUrl, Mode=OneTime}" 
-                           Stretch="UniformToFill"/>
+                    <Grid>
+                        <Grid x:Name="ImagePlaceholder"
+                              Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                            <FontIcon Glyph="&#xE7C3;"
+                                      FontSize="14"
+                                      Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"/>
+                        </Grid>
+                        <Image x:Name="GameImage"
+                               Width="32"
+                               Height="32"
+                               Stretch="UniformToFill"
+                               Opacity="0"
+                               ImageOpened="GameImage_ImageOpened"/>
+                    </Grid>
                 </Border>
 
                 <!-- Game Name -->
@@ -145,7 +173,8 @@
                   CornerRadius="8"
                   BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                   BorderThickness="1"
-                  Padding="0">
+                  Padding="0"
+                  Tapped="GameItem_Tapped">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
@@ -153,9 +182,21 @@
 
                 <!-- Game Logo/Image -->
                 <Border Grid.RowSpan="2" CornerRadius="8">
-                    <Image Source="{x:Bind ImageUrl, Mode=OneTime}" 
-                           Stretch="UniformToFill"
-                           HorizontalAlignment="Center"/>
+                    <Grid>
+                        <Grid x:Name="ImagePlaceholder"
+                              Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                            <FontIcon Glyph="&#xE7C3;"
+                                      FontSize="32"
+                                      Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center"/>
+                        </Grid>
+                        <Image x:Name="GameImage"
+                               Stretch="UniformToFill"
+                               HorizontalAlignment="Center"
+                               Opacity="0"
+                               ImageOpened="GameImage_ImageOpened"/>
+                    </Grid>
                 </Border>
                 
                 <!-- Gradient overlay -->
@@ -337,25 +378,39 @@
         </Grid>
 
         <!-- Games Grid -->
-        <GridView x:Name="GamesGridView"
-                  Grid.Row="2"
-                  ItemsSource="{x:Bind ViewModel.FilteredGames, Mode=OneWay}"
-                  SelectionMode="Single"
-                  IsItemClickEnabled="True"
-                  ItemClick="GamesGridView_ItemClick"
-                  ItemTemplate="{StaticResource DefaultViewTemplate}">
-        </GridView>
+        <ScrollViewer x:Name="GamesRepeaterScroll"
+                      Grid.Row="2"
+                      HorizontalScrollBarVisibility="Disabled">
+            <ItemsRepeater x:Name="GamesRepeater"
+                            ItemsSource="{x:Bind ViewModel.FilteredGames, Mode=OneWay}"
+                            ItemTemplate="{StaticResource DefaultViewTemplate}"
+                            ElementPrepared="GamesRepeater_ElementPrepared"
+                            ElementClearing="GamesRepeater_ElementClearing">
+                <ItemsRepeater.Layout>
+                    <UniformGridLayout x:Name="GamesRepeaterLayout"
+                                       MinItemWidth="230"
+                                       MinItemHeight="120"
+                                       MinColumnSpacing="12"
+                                       MinRowSpacing="12"/>
+                </ItemsRepeater.Layout>
+            </ItemsRepeater>
+        </ScrollViewer>
 
         <!-- Games List (for Compact View) -->
-        <ListView x:Name="GamesListView"
-                  Grid.Row="2"
-                  ItemsSource="{x:Bind ViewModel.FilteredGames, Mode=OneWay}"
-                  SelectionMode="Single"
-                  IsItemClickEnabled="True"
-                  ItemClick="GamesListView_ItemClick"
-                  ItemTemplate="{StaticResource CompactViewTemplate}"
-                  Visibility="Collapsed">
-        </ListView>
+        <ScrollViewer x:Name="GamesListRepeaterScroll"
+                      Grid.Row="2"
+                      HorizontalScrollBarVisibility="Disabled"
+                      Visibility="Collapsed">
+            <ItemsRepeater x:Name="GamesListRepeater"
+                            ItemsSource="{x:Bind ViewModel.FilteredGames, Mode=OneWay}"
+                            ItemTemplate="{StaticResource CompactViewTemplate}"
+                            ElementPrepared="GamesRepeater_ElementPrepared"
+                            ElementClearing="GamesRepeater_ElementClearing">
+                <ItemsRepeater.Layout>
+                    <StackLayout Spacing="6"/>
+                </ItemsRepeater.Layout>
+            </ItemsRepeater>
+        </ScrollViewer>
 
         <!-- Loading Overlay -->
         <Grid x:Name="LoadingOverlay"

@@ -141,9 +141,10 @@
 
         <!-- Achievements List -->
         <ListView x:Name="AchievementsListView"
-                  Grid.Row="4"
-                  ItemsSource="{x:Bind ViewModel.FilteredAchievements, Mode=OneWay}"
-                  SelectionMode="None">
+              Grid.Row="4"
+              ItemsSource="{x:Bind ViewModel.FilteredAchievements, Mode=OneWay}"
+              SelectionMode="None"
+              ContainerContentChanging="AchievementsListView_ContainerContentChanging">
             <ListView.ItemContainerTransitions>
                 <TransitionCollection>
                     <AddDeleteThemeTransition/>
@@ -190,8 +191,20 @@
                             <Border Grid.Column="1" 
                                     Width="48" Height="48" 
                                     CornerRadius="4">
-                                <Image Source="{x:Bind CurrentIconUrl, Mode=OneWay}" 
-                                       Stretch="UniformToFill"/>
+                                <Grid>
+                                    <Grid x:Name="AchievementIconPlaceholder"
+                                          Background="{ThemeResource CardBackgroundFillColorDefaultBrush}">
+                                        <FontIcon Glyph="&#xE7C3;"
+                                                  FontSize="16"
+                                                  Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"/>
+                                    </Grid>
+                                    <Image x:Name="AchievementIconImage"
+                                           Stretch="UniformToFill"
+                                           Opacity="0"
+                                           ImageOpened="AchievementIcon_ImageOpened"/>
+                                </Grid>
                             </Border>
 
                             <!-- Achievement Info -->
@@ -239,16 +252,37 @@
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
             <TextBlock x:Name="StatusText"
                        VerticalAlignment="Center"
                        Style="{StaticResource CaptionTextBlockStyle}">
-                <Run Text="{x:Bind ViewModel.FilteredAchievements.Count, Mode=OneWay}"/>
+                <Run Text="{x:Bind ViewModel.FilteredTotalCount, Mode=OneWay}"/>
                 <Run Text="Achievements angezeigt"/>
             </TextBlock>
 
-            <StackPanel Grid.Column="1" 
+                <StackPanel Grid.Column="1" 
+                    Orientation="Horizontal"
+                    Spacing="8"
+                    VerticalAlignment="Center"
+                    Visibility="{x:Bind ViewModel.IsPagingEnabled, Mode=OneWay}">
+                <Button Content="&#xE72B;"
+                    FontFamily="Segoe Fluent Icons"
+                    Width="32" Height="28"
+                    Command="{x:Bind ViewModel.PreviousPageCommand}"
+                    IsEnabled="{x:Bind ViewModel.CanGoPrevious, Mode=OneWay}"/>
+                <TextBlock Text="{x:Bind ViewModel.PageDisplay, Mode=OneWay}"
+                       VerticalAlignment="Center"
+                       Style="{StaticResource CaptionTextBlockStyle}"/>
+                <Button Content="&#xE72A;"
+                    FontFamily="Segoe Fluent Icons"
+                    Width="32" Height="28"
+                    Command="{x:Bind ViewModel.NextPageCommand}"
+                    IsEnabled="{x:Bind ViewModel.CanGoNext, Mode=OneWay}"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="2" 
                         Orientation="Horizontal" 
                         Spacing="8"
                         Visibility="{x:Bind ViewModel.HasUnsavedChanges, Mode=OneWay}">

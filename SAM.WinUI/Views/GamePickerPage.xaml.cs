@@ -23,6 +23,8 @@
 using System.Diagnostics;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
 using SAM.Core.Models;
 using SAM.Core.Services;
@@ -99,18 +101,22 @@ public sealed partial class GamePickerPage : Page
         switch (viewType)
         {
             case 1: // Compact List
-                GamesGridView.Visibility = Visibility.Collapsed;
-                GamesListView.Visibility = Visibility.Visible;
+                GamesRepeaterScroll.Visibility = Visibility.Collapsed;
+                GamesListRepeaterScroll.Visibility = Visibility.Visible;
                 break;
             case 2: // Detail Cards
-                GamesGridView.Visibility = Visibility.Visible;
-                GamesListView.Visibility = Visibility.Collapsed;
-                GamesGridView.ItemTemplate = (DataTemplate)Resources["DetailViewTemplate"];
+                GamesRepeaterScroll.Visibility = Visibility.Visible;
+                GamesListRepeaterScroll.Visibility = Visibility.Collapsed;
+                GamesRepeater.ItemTemplate = (DataTemplate)Resources["DetailViewTemplate"];
+                GamesRepeaterLayout.MinItemWidth = 320;
+                GamesRepeaterLayout.MinItemHeight = 180;
                 break;
             default: // Default Cards
-                GamesGridView.Visibility = Visibility.Visible;
-                GamesListView.Visibility = Visibility.Collapsed;
-                GamesGridView.ItemTemplate = (DataTemplate)Resources["DefaultViewTemplate"];
+                GamesRepeaterScroll.Visibility = Visibility.Visible;
+                GamesListRepeaterScroll.Visibility = Visibility.Collapsed;
+                GamesRepeater.ItemTemplate = (DataTemplate)Resources["DefaultViewTemplate"];
+                GamesRepeaterLayout.MinItemWidth = 230;
+                GamesRepeaterLayout.MinItemHeight = 120;
                 break;
         }
     }
@@ -297,7 +303,7 @@ public sealed partial class GamePickerPage : Page
         }
     }
 
-    private void GamesGridView_ItemClick(object sender, ItemClickEventArgs e)
+    private void GameItem_Tapped(object sender, TappedRoutedEventArgs e)
     {
         Log.Method();
         
@@ -308,7 +314,8 @@ public sealed partial class GamePickerPage : Page
             return;
         }
         
-        if (e.ClickedItem is GameModel game)
+        var element = sender as FrameworkElement;
+        if (element?.DataContext is GameModel game)
         {
             Log.Info($"Game clicked - Id: {game.Id}, Name: {game.Name}");
             
@@ -318,15 +325,81 @@ public sealed partial class GamePickerPage : Page
         }
         else
         {
-            Log.Warn($"ClickedItem is not a GameModel! Type: {e.ClickedItem?.GetType().FullName}");
+            Log.Warn($"ClickedItem is not a GameModel! Type: {element?.DataContext?.GetType().FullName}");
         }
     }
 
-    private void GamesListView_ItemClick(object sender, ItemClickEventArgs e)
+    private void GamesRepeater_ElementPrepared(ItemsRepeater sender, ItemsRepeaterElementPreparedEventArgs args)
     {
-        // Reuse the same logic as GridView
-        GamesGridView_ItemClick(sender, e);
+        if (args.Element is not FrameworkElement element || element.DataContext is not GameModel game)
+        {
+            return;
+        }
+
+        var image = element.FindName("GameImage") as Image;
+        var placeholder = element.FindName("ImagePlaceholder") as FrameworkElement;
+        if (image is null)
+        {
+            return;
+        }
+
+        image.Opacity = 0;
+        if (placeholder is not null)
+        {
+            placeholder.Visibility = Visibility.Visible;
+        }
+
+        image.Source = null;
+        if (string.IsNullOrWhiteSpace(game.ImageUrl))
+        {
+            return;
+        }
+
+        var decodeWidth = image.Width > 0 ? (int)image.Width : (element.Width > 0 ? (int)element.Width : 256);
+        var bitmap = new BitmapImage(new Uri(game.ImageUrl))
+        {
+            DecodePixelWidth = Math.Max(32, decodeWidth)
+        };
+        image.Tag = new ImageTag(placeholder);
+        image.Source = bitmap;
     }
+
+    private void GamesRepeater_ElementClearing(ItemsRepeater sender, ItemsRepeaterElementClearingEventArgs args)
+    {
+        if (args.Element is not FrameworkElement element)
+        {
+            return;
+        }
+
+        var image = element.FindName("GameImage") as Image;
+        var placeholder = element.FindName("ImagePlaceholder") as FrameworkElement;
+        if (image is not null)
+        {
+            image.Source = null;
+            image.Opacity = 0;
+        }
+
+        if (placeholder is not null)
+        {
+            placeholder.Visibility = Visibility.Visible;
+        }
+    }
+
+    private void GameImage_ImageOpened(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Image image)
+        {
+            return;
+        }
+
+        image.Opacity = 1;
+        if (image.Tag is ImageTag tag && tag.Placeholder is not null)
+        {
+            tag.Placeholder.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    private sealed record ImageTag(FrameworkElement? Placeholder);
 
     private void UpdateEmptyState()
     {

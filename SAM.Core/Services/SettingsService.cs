@@ -112,6 +112,18 @@ public class SettingsService : ISettingsService
 
     public string ImageCachePath => _settings.ImageCachePath;
 
+    public long ImageCacheMaxSizeBytes
+    {
+        get => _settings.ImageCacheMaxSizeBytes;
+        set => _settings.ImageCacheMaxSizeBytes = value;
+    }
+
+    public bool EnableOfflineMode
+    {
+        get => _settings.EnableOfflineMode;
+        set => _settings.EnableOfflineMode = value;
+    }
+
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -141,6 +153,16 @@ public class SettingsService : ISettingsService
             // If loading fails, use default settings
             Log.Warn($"Failed to load settings: {ex.Message}");
             _settings = new SettingsData();
+        }
+
+        if (_settings.ImageCacheMaxSizeBytes <= 0)
+        {
+            _settings.ImageCacheMaxSizeBytes = 100 * 1024 * 1024;
+        }
+
+        if (string.IsNullOrWhiteSpace(_settings.ImageCachePath))
+        {
+            _settings.ImageCachePath = AppPaths.CachePath;
         }
 
         // Ensure cache directory exists
@@ -279,5 +301,7 @@ public class SettingsService : ISettingsService
         public bool UseSystemAccentColor { get; set; } = true;
         public string AccentColor { get; set; } = "#FF0078D4";
         public string ImageCachePath { get; set; } = "";
+        public long ImageCacheMaxSizeBytes { get; set; } = 100 * 1024 * 1024;
+        public bool EnableOfflineMode { get; set; } = true;
     }
 }

@@ -38,6 +38,7 @@ public sealed partial class SettingsPage : Page
     private readonly ILocalizationService _localizationService;
     private readonly ISettingsService _settingsService;
     private readonly ILibraryFetchService _libraryFetchService;
+    private readonly IImageCacheService _imageCacheService;
     private bool _isInitializing = true;
     private CancellationTokenSource? _fetchCts;
 
@@ -47,6 +48,7 @@ public sealed partial class SettingsPage : Page
         _localizationService = App.GetService<ILocalizationService>();
         _settingsService = App.GetService<ISettingsService>();
         _libraryFetchService = App.GetService<ILibraryFetchService>();
+        _imageCacheService = App.GetService<IImageCacheService>();
         InitializeComponent();
         
         // Set current theme selection
@@ -65,12 +67,16 @@ public sealed partial class SettingsPage : Page
         ShowHiddenToggle.IsOn = _settingsService.ShowHiddenAchievements;
         SyncSettingsToggle.IsOn = _settingsService.UseSharedSettings;
         AutoUpdateToggle.IsOn = _settingsService.AutoUpdateEnabled;
+        OfflineModeToggle.IsOn = _settingsService.EnableOfflineMode;
 
         AccentColorModeComboBox.SelectedIndex = _settingsService.UseSystemAccentColor ? 0 : 1;
         AccentColorPicker.Color = TryParseColor(_settingsService.AccentColor, out var color)
             ? color
             : GetSystemAccentColor();
         AccentColorPicker.Visibility = _settingsService.UseSystemAccentColor ? Visibility.Collapsed : Visibility.Visible;
+
+        CacheLimitBox.Value = Math.Max(50, Math.Min(1024, _settingsService.ImageCacheMaxSizeBytes / (1024.0 * 1024)));
+        UpdateCacheStatus();
         
         // Show last fetch status
         UpdateFetchStatus();
@@ -136,6 +142,8 @@ public sealed partial class SettingsPage : Page
         SyncSettingsDescriptionText.Text = Loc.Get("Settings.SyncSettingsDescription");
         AutoUpdateTitleText.Text = Loc.Get("Settings.AutoUpdate");
         AutoUpdateDescriptionText.Text = Loc.Get("Settings.AutoUpdateDescription");
+        OfflineModeTitleText.Text = Loc.Get("Settings.OfflineMode");
+        OfflineModeDescriptionText.Text = Loc.Get("Settings.OfflineModeDescription");
         
         // Data section
         DataSectionText.Text = Loc.Get("Settings.Data");
@@ -143,6 +151,11 @@ public sealed partial class SettingsPage : Page
         ForceFetchDescriptionText.Text = Loc.Get("Settings.ForceFetchDescription");
         ForceFetchButton.Content = Loc.Get("Settings.ForceFetchButton");
         CancelFetchButton.Content = Loc.Get("Settings.Cancel");
+        CacheLimitTitleText.Text = Loc.Get("Settings.CacheLimit");
+        CacheLimitDescriptionText.Text = Loc.Get("Settings.CacheLimitDescription");
+        CacheLimitUnitText.Text = Loc.Get("Settings.CacheSizeUnit");
+        CacheStatusTitleText.Text = Loc.Get("Settings.CacheStatusTitle");
+        ClearCacheButton.Content = Loc.Get("Settings.ClearCache");
     }
     
     private void UpdateFetchStatus()
@@ -276,6 +289,56 @@ public sealed partial class SettingsPage : Page
 
         _settingsService.AutoUpdateEnabled = AutoUpdateToggle.IsOn;
         await _settingsService.SaveAsync();
+    }
+
+    private async void OfflineModeToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_isInitializing) return;
+
+        _settingsService.EnableOfflineMode = OfflineModeToggle.IsOn;
+        await _settingsService.SaveAsync();
+    }
+
+    private async void CacheLimitBox_ValueChanged(NumberBox sender, NumberBoxValueChangedEventArgs args)
+    {
+        if (_isInitializing) return;
+        if (double.IsNaN(sender.Value) || sender.Value <= 0)
+        {
+            return;
+        }
+
+        var newLimitBytes = (long)(sender.Value * 1024 * 1024);
+        _settingsService.ImageCacheMaxSizeBytes = newLimitBytes;
+        _imageCacheService.MaxCacheSizeBytes = newLimitBytes;
+        await _settingsService.SaveAsync();
+        await _imageCacheService.EvictOldEntriesAsync();
+        UpdateCacheStatus();
+    }
+
+    private void UpdateCacheStatus()
+    {
+        var stats = _imageCacheService.GetStatistics();
+        var used = FormatBytes(stats.TotalSizeBytes);
+        var max = FormatBytes(stats.MaxSizeBytes);
+        CacheStatusText.Text = string.Format(Loc.Get("Settings.CacheStatusFormat"), used, max);
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        return bytes switch
+        {
+            < 1024 => $"{bytes} B",
+            < 1024 * 1024 => $"{bytes / 1024.0:F1} KB",
+            < 1024 * 1024 * 1024 => $"{bytes / (1024.0 * 1024):F1} MB",
+            _ => $"{bytes / (1024.0 * 1024 * 1024):F2} GB"
+        };
+    }
+
+    private async void ClearCacheButton_Click(object sender, RoutedEventArgs e)
+    {
+        _imageCacheService.ClearCache();
+        await _imageCacheService.EvictOldEntriesAsync();
+        UpdateCacheStatus();
     }
     
     private async void ForceFetchButton_Click(object sender, RoutedEventArgs e)

@@ -145,6 +145,22 @@ public class SettingsServiceTests
     }
 
     [Fact]
+    public void ImageCacheMaxSize_DefaultValue_Is100Mb()
+    {
+        var service = new MockSettingsService();
+
+        Assert.Equal(100 * 1024 * 1024, service.ImageCacheMaxSizeBytes);
+    }
+
+    [Fact]
+    public void EnableOfflineMode_DefaultValue_IsTrue()
+    {
+        var service = new MockSettingsService();
+
+        Assert.True(service.EnableOfflineMode);
+    }
+
+    [Fact]
     public async Task LoadAsync_SetsLoadAsyncCalled()
     {
         // Arrange

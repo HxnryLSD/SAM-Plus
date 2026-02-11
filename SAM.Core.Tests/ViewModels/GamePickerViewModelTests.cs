@@ -33,6 +33,7 @@ public class GamePickerViewModelTests
     private readonly MockImageCacheService _imageCacheService;
     private readonly MockUserDataService _userDataService;
     private readonly MockGameCacheService _gameCacheService;
+    private readonly MockSettingsService _settingsService;
     private readonly GamePickerViewModel _viewModel;
 
     public GamePickerViewModelTests()
@@ -41,11 +42,13 @@ public class GamePickerViewModelTests
         _imageCacheService = new MockImageCacheService();
         _userDataService = new MockUserDataService();
         _gameCacheService = new MockGameCacheService();
+        _settingsService = new MockSettingsService();
         _viewModel = new GamePickerViewModel(
             () => _steamService,
             () => _imageCacheService,
             () => _userDataService,
-            () => _gameCacheService);
+            () => _gameCacheService,
+            _settingsService);
     }
 
     private static List<GameModel> CreateTestGames()

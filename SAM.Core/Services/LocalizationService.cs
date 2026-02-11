@@ -119,6 +119,14 @@ public class LocalizationService : ILocalizationService
             ["Settings.Cancel"] = "Cancel",
             ["Settings.RestartRequired"] = "Restart Required",
             ["Settings.RestartRequiredMessage"] = "Please restart the application to apply language changes.",
+            ["Settings.OfflineMode"] = "Offline mode",
+            ["Settings.OfflineModeDescription"] = "Use cached data when Steam has no internet",
+            ["Settings.CacheLimit"] = "Image cache size",
+            ["Settings.CacheLimitDescription"] = "Limit for image cache storage",
+            ["Settings.CacheSizeUnit"] = "MB",
+            ["Settings.CacheStatusTitle"] = "Image cache",
+            ["Settings.ClearCache"] = "Clear",
+            ["Settings.CacheStatusFormat"] = "{0} used of {1}",
             
             // About
             ["About.Title"] = "About",
@@ -294,6 +302,14 @@ public class LocalizationService : ILocalizationService
             ["Settings.Cancel"] = "Abbrechen",
             ["Settings.RestartRequired"] = "Neustart erforderlich",
             ["Settings.RestartRequiredMessage"] = "Bitte starte die Anwendung neu, um die Sprachänderungen zu übernehmen.",
+            ["Settings.OfflineMode"] = "Offline-Modus",
+            ["Settings.OfflineModeDescription"] = "Cache-Daten nutzen, wenn Steam kein Internet hat",
+            ["Settings.CacheLimit"] = "Bild-Cache-Größe",
+            ["Settings.CacheLimitDescription"] = "Limit für den Bild-Cache",
+            ["Settings.CacheSizeUnit"] = "MB",
+            ["Settings.CacheStatusTitle"] = "Bild-Cache",
+            ["Settings.ClearCache"] = "Leeren",
+            ["Settings.CacheStatusFormat"] = "{0} belegt von {1}",
             
             // About
             ["About.Title"] = "Info",
