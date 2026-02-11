@@ -20,40 +20,23 @@
  *    distribution.
  */
 
-using Microsoft.UI.Xaml;
-
-namespace SAM.WinUI.Services;
+namespace SAM.Core.Services;
 
 /// <summary>
-/// Service for managing application theme (Light, Dark, System default).
+/// Service for checking for new releases.
 /// </summary>
-public interface IThemeService
+public interface IUpdateService
 {
     /// <summary>
-    /// Gets the current theme.
+    /// Checks GitHub for a newer release than the current version.
     /// </summary>
-    ElementTheme CurrentTheme { get; }
+    Task<UpdateCheckResult> CheckForUpdateAsync(string currentVersion, CancellationToken cancellationToken = default);
+}
 
-    /// <summary>
-    /// Sets the application theme.
-    /// </summary>
-    /// <param name="theme">The theme to apply.</param>
-    void SetTheme(ElementTheme theme);
-
-    /// <summary>
-    /// Sets the theme from a string value ("Light", "Dark", "System").
-    /// </summary>
-    /// <param name="themeName">The theme name.</param>
-    void SetTheme(string themeName);
-
-    /// <summary>
-    /// Initializes the theme service and applies saved theme.
-    /// </summary>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    Task InitializeAsync(CancellationToken cancellationToken = default);
-
-    /// <summary>
-    /// Applies the accent color settings.
-    /// </summary>
-    void ApplyAccentColor(bool useSystemAccentColor, string accentColor);
+public record UpdateCheckResult
+{
+    public bool IsUpdateAvailable { get; init; }
+    public string? LatestVersion { get; init; }
+    public string? ReleaseUrl { get; init; }
+    public string? ErrorMessage { get; init; }
 }

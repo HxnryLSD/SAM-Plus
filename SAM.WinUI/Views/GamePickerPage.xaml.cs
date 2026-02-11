@@ -145,7 +145,8 @@ public sealed partial class GamePickerPage : Page
         FilterDlcsItem.Content = Loc.Get("GamePicker.Filter.DlcsOnly");
         FilterDemosItem.Content = Loc.Get("GamePicker.Filter.DemosOnly");
         RefreshButtonText.Text = Loc.Get("GamePicker.Refresh");
-        LoadingText.Text = Loc.Get("GamePicker.Loading");
+        LoadingText.Text = Loc.Get("GamePicker.InitializingSteam");
+        RefreshIndicatorText.Text = Loc.Get("GamePicker.Refreshing");
         ErrorInfoBar.Title = Loc.Get("Common.Error");
         EmptyTitleText.Text = Loc.Get("GamePicker.NoGames");
         EmptyDescriptionText.Text = Loc.Get("GamePicker.EnsureSteamRunning");
@@ -194,10 +195,22 @@ public sealed partial class GamePickerPage : Page
         Log.Method();
         try
         {
-            Log.Debug("Setting LoadingOverlay visible...");
-            LoadingOverlay.Visibility = Visibility.Visible;
+            Log.Debug("Preparing loading state...");
+            LoadingOverlay.Visibility = Visibility.Collapsed;
             EmptyState.Visibility = Visibility.Collapsed;
             ErrorInfoBar.IsOpen = false;
+
+            var hasCachedGames = await ViewModel.TryLoadCachedGamesAsync();
+            if (hasCachedGames)
+            {
+                UpdateEmptyState();
+            }
+            else
+            {
+                Log.Debug("Setting LoadingOverlay visible...");
+                LoadingText.Text = Loc.Get("GamePicker.InitializingSteam");
+                LoadingOverlay.Visibility = Visibility.Visible;
+            }
 
             Log.Info("Executing ViewModel.LoadGamesCommand...");
             await ViewModel.LoadGamesCommand.ExecuteAsync(null);

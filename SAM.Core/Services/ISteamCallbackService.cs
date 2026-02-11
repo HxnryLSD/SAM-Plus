@@ -21,6 +21,7 @@
  */
 
 using SAM.API.Types;
+using SAM.API;
 
 namespace SAM.Core.Services;
 
@@ -55,6 +56,12 @@ public interface ISteamCallbackService : IDisposable
     /// </summary>
     /// <param name="dispatcher">An action that schedules work on the UI thread.</param>
     void SetUiDispatcher(Action<Action> dispatcher);
+
+    /// <summary>
+    /// Sets the Steam client to use for callbacks.
+    /// Must be called after SteamService.InitializeForGame() to get the correct client.
+    /// </summary>
+    void SetClient(Client client);
 
     /// <summary>
     /// Requests user stats from Steam and waits for the callback.

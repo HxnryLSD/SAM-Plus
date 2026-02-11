@@ -36,6 +36,10 @@ public class MockSettingsService : ISettingsService
     public bool WarnOnUnsavedChanges { get; set; } = true;
     public bool ShowHiddenAchievements { get; set; } = true;
     public int GameViewType { get; set; }
+    public bool UseSharedSettings { get; set; }
+    public bool AutoUpdateEnabled { get; set; } = true;
+    public bool UseSystemAccentColor { get; set; } = true;
+    public string AccentColor { get; set; } = "#FF0078D4";
     public string ImageCachePath { get; set; } = Path.Combine(Path.GetTempPath(), "SAM.Tests", "ImageCache");
 
     public bool LoadAsyncCalled { get; private set; }
@@ -64,5 +68,9 @@ public class MockSettingsService : ISettingsService
         WarnOnUnsavedChanges = true;
         ShowHiddenAchievements = true;
         GameViewType = 0;
+        UseSharedSettings = false;
+        AutoUpdateEnabled = true;
+        UseSystemAccentColor = true;
+        AccentColor = "#FF0078D4";
     }
 }

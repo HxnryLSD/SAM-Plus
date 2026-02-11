@@ -72,6 +72,41 @@
                                   Width="200"
                                   SelectionChanged="LanguageComboBox_SelectionChanged"/>
                     </Grid>
+
+                    <!-- Accent Color Setting -->
+                    <StackPanel Spacing="8">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel>
+                                <TextBlock x:Name="AccentColorTitleText"
+                                           Text="Accent color"
+                                           Style="{StaticResource BodyTextBlockStyle}"/>
+                                <TextBlock x:Name="AccentColorDescriptionText"
+                                           Text="Use the system accent color or choose a custom one"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            </StackPanel>
+
+                            <ComboBox x:Name="AccentColorModeComboBox"
+                                      Grid.Column="1"
+                                      SelectedIndex="0"
+                                      Width="200"
+                                      SelectionChanged="AccentColorModeComboBox_SelectionChanged">
+                                <ComboBoxItem x:Name="AccentSystemItem" Content="System"/>
+                                <ComboBoxItem x:Name="AccentCustomItem" Content="Custom"/>
+                            </ComboBox>
+                        </Grid>
+
+                        <ColorPicker x:Name="AccentColorPicker"
+                                     IsAlphaEnabled="True"
+                                     IsCompact="True"
+                                     ColorChanged="AccentColorPicker_ColorChanged"
+                                     Visibility="Collapsed"/>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 
@@ -122,6 +157,44 @@
                         <ToggleSwitch x:Name="ShowHiddenToggle"
                                       Grid.Column="1"
                                       Toggled="ShowHiddenToggle_Toggled"/>
+                    </Grid>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel>
+                            <TextBlock x:Name="SyncSettingsTitleText" Text="Sync settings between apps"
+                                       Style="{StaticResource BodyTextBlockStyle}"/>
+                            <TextBlock x:Name="SyncSettingsDescriptionText" Text="Share settings between SAM.WinUI and SAM.Manager"
+                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+
+                        <ToggleSwitch x:Name="SyncSettingsToggle"
+                                      Grid.Column="1"
+                                      Toggled="SyncSettingsToggle_Toggled"/>
+                    </Grid>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel>
+                            <TextBlock x:Name="AutoUpdateTitleText" Text="Check for updates on start"
+                                       Style="{StaticResource BodyTextBlockStyle}"/>
+                            <TextBlock x:Name="AutoUpdateDescriptionText" Text="Checks GitHub for new releases when the app starts"
+                                       Style="{StaticResource CaptionTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+
+                        <ToggleSwitch x:Name="AutoUpdateToggle"
+                                      Grid.Column="1"
+                                      Toggled="AutoUpdateToggle_Toggled"/>
                     </Grid>
                 </StackPanel>
             </Border>

@@ -4,8 +4,8 @@
 
 | Priorität | Task | Aufwand | Status |
 |-----------|------|---------|--------|
-| 🔴 **P0** | SSL-Validierung fixen (Sicherheitslücke) | Niedrig | Offen |
-| 🔴 **P0** | StatisticsPage Save-Button implementieren | Mittel | Offen |
+| 🔴 **P0** | SSL-Validierung fixen (Sicherheitslücke) | Niedrig | Erledigt |
+| 🔴 **P0** | StatisticsPage Save-Button implementieren | Mittel | Erledigt |
 | 🔴 **P1** | Concrete Cast / Interface-Leaking beheben | Niedrig | Offen |
 | 🔴 **P1** | Code-Duplikation eliminieren (Converters, Schema) | Mittel | Offen |
 | 🔴 **P1** | Hardcoded Strings → Lokalisierung | Mittel | Offen |
@@ -42,23 +42,23 @@
 ### 🔴 P0 — Kritisch (Sicherheit & Funktionalität)
 
 #### SSL-Zertifikatsvalidierung deaktiviert
-- [ ] `ServerCertificateCustomValidationCallback = (…) => true` in `SteamService.cs` entfernen
-- [ ] Nur für `gib.me`-Domain Ausnahme implementieren oder Zertifikat pinnen
-- [ ] Kein globales Deaktivieren aller SSL-Prüfungen
+- [x] `ServerCertificateCustomValidationCallback = (…) => true` in `SteamService.cs` entfernen
+- [x] Nur für `gib.me`-Domain Ausnahme implementieren oder Zertifikat pinnen
+- [x] Kein globales Deaktivieren aller SSL-Prüfungen
 
 #### StatisticsPage Save-Button funktionslos
-- [ ] `// TODO: Implement actual save via SteamService` in `StatisticsPage.xaml.cs` umsetzen
-- [ ] Stats-Änderungen via `SteamUserStats` tatsächlich an Steam senden
-- [ ] Button deaktivieren oder Hinweis anzeigen solange nicht implementiert
+- [x] `// TODO: Implement actual save via SteamService` in `StatisticsPage.xaml.cs` umsetzen
+- [x] Stats-Änderungen via `SteamUserStats` tatsächlich an Steam senden
+- [x] Button deaktivieren oder Hinweis anzeigen solange nicht implementiert
 
 ---
 
 ### 🔴 P1 — SOLID & Duplikation
 
 #### Concrete Cast bricht DI
-- [ ] `((SteamCallbackService)_callbackService).SetClient(…)` in `AchievementService.cs` entfernen
-- [ ] `SetClient(Client client)` Methode zum `ISteamCallbackService` Interface hinzufügen
-- [ ] Alle Interface-Casts in der gesamten Codebase suchen und eliminieren
+- [x] `((SteamCallbackService)_callbackService).SetClient(…)` in `AchievementService.cs` entfernen
+- [x] `SetClient(Client client)` Methode zum `ISteamCallbackService` Interface hinzufügen
+- [x] Alle Interface-Casts in der gesamten Codebase suchen und eliminieren
 
 #### ISteamService Leaking Implementation Details
 - [ ] `Client?`, `SteamUserStats013?`, `SteamApps008?` Properties aus `ISteamService` entfernen
@@ -273,14 +273,14 @@
 - [ ] **ARIA-Labels** für Achievement-Status und Progress
 
 #### Quality of Life
-- [ ] **Einstellungs-Sync** — Zwischen SAM.WinUI und SAM.Manager (Shared-Settings über SQLite)
-- [ ] **Auto-Update** — Prüfung auf neue Version beim Start (GitHub Releases API)
+- [x] **Einstellungs-Sync** — Zwischen SAM.WinUI und SAM.Manager (Shared-Settings über SQLite)
+- [x] **Auto-Update** — Prüfung auf neue Version beim Start (GitHub Releases API)
 - [ ] **Tray-Icon** — Minimieren in System-Tray mit Schnellzugriff
 - [ ] **Multi-Monitor** — Fensterposition pro Monitor merken
 - [ ] **Kommandozeilen-Argumente** — `--game <id>` für Direktstart
 
 #### Themes & Personalisierung
-- [ ] **Akzentfarbe** wählbar (System oder benutzerdefiniert)
+- [x] **Akzentfarbe** wählbar (System oder benutzerdefiniert)
 - [ ] **Eigene Header-Bilder** für Game-Cards (Custom Banner)
 - [ ] **Kompakter Modus** — Reduzierte Abstände für kleine Bildschirme
 
@@ -289,10 +289,10 @@
 ## ⚡ Performance & Ladezeit
 
 ### Startup-Optimierung
-- [ ] **Lazy Service-Initialisierung** — Services erst bei Bedarf laden
-- [ ] **Splash Screen** — Visuelles Feedback während Steam-Initialisierung
-- [ ] **Parallel Loading** — Steam-Client und UI parallel initialisieren
-- [ ] **Cached Game List** — Letzte Spieleliste aus SQLite, im Hintergrund aktualisieren
+- [x] **Lazy Service-Initialisierung** — Services erst bei Bedarf laden
+- [x] **Splash Screen** — Visuelles Feedback während Steam-Initialisierung
+- [x] **Parallel Loading** — Steam-Client und UI parallel initialisieren
+- [x] **Cached Game List** — Letzte Spieleliste aus SQLite, im Hintergrund aktualisieren
 
 ### Game Picker Performance
 - [ ] **ItemsRepeater** mit Virtualisierung für große Bibliotheken (>500 Spiele)

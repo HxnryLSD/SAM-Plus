@@ -139,7 +139,10 @@ Das Projekt enthält Unit Tests für SAM.Core in `SAM.Core.Tests/`.
 ### Tests ausführen
 
 ```powershell
-# Alle Tests ausführen
+# Alle Tests in der Solution ausführen
+dotnet test
+
+# Alle Tests ausführen (nur SAM.Core.Tests)
 dotnet test SAM.Core.Tests\SAM.Core.Tests.csproj
 
 # Mit detaillierter Ausgabe
@@ -155,7 +158,18 @@ dotnet test SAM.Core.Tests\SAM.Core.Tests.csproj --collect:"XPlat Code Coverage"
 |--------|--------------|
 | `Mocks/` | Mock-Implementierungen für Services (ISteamService, IAchievementService, etc.) |
 | `ViewModels/` | Tests für GamePickerViewModel, AchievementManagerViewModel |
-| `Services/` | Tests für SettingsService, ImageCacheService, etc. |
+| `Services/` | Tests für AchievementService, SteamCallbackService, DrmProtectionService, GameCacheService, LocalizationService, etc. |
+| `Utilities/` | Tests für AppPaths, SteamErrorHelper |
+
+### Neue Test-Schwerpunkte
+
+- Steam-Fehlertexte: SteamErrorHelper (Pattern-Matches, Fallbacks)
+- Lokalisierung: LocalizationService (Fallbacks, Events)
+- Steam-Callbacks: TranslateResultCode + Retry-Logik
+- DRM-Protection: Schema-Parsing + Caching
+- SQLite Cache: GameCacheService (In-Memory)
+- ViewModel-Basics: ViewModelBase (Busy-Guard, Errors, Cancellation)
+- App-Pfade: AppPaths (User/Game/Logs, Sanitizing)
 
 ### Test-Framework
 

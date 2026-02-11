@@ -22,6 +22,7 @@
 
 using System.Net;
 using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 using System.Xml.XPath;
 using SAM.API;
 using SAM.API.Wrappers;
@@ -48,10 +49,10 @@ public class SteamService : ISteamService
         var handler = new HttpClientHandler
         {
             // Allow all TLS versions
-            SslProtocols = System.Security.Authentication.SslProtocols.Tls12 | 
+            SslProtocols = System.Security.Authentication.SslProtocols.Tls12 |
                            System.Security.Authentication.SslProtocols.Tls13,
-            // Accept all certificates (the gib.me certificate may have issues)
-            ServerCertificateCustomValidationCallback = (message, cert, chain, sslPolicyErrors) => true
+            // Only allow certificate exceptions for gib.me.
+            ServerCertificateCustomValidationCallback = ValidateServerCertificate
         };
         _httpClient = new HttpClient(handler);
         _httpClient.DefaultRequestHeaders.Add("User-Agent", "SAM.WinUI/1.0");
@@ -210,6 +211,26 @@ public class SteamService : ISteamService
         }
 
         return games.OrderBy(g => g.Name);
+    }
+
+    private static bool ValidateServerCertificate(
+        HttpRequestMessage? message,
+        X509Certificate2? certificate,
+        X509Chain? chain,
+        SslPolicyErrors sslPolicyErrors)
+    {
+        if (sslPolicyErrors == SslPolicyErrors.None)
+        {
+            return true;
+        }
+
+        var host = message?.RequestUri?.Host;
+        if (!string.IsNullOrEmpty(host) && string.Equals(host, "gib.me", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return false;
     }
 
     private string? GetGameImageUrl(uint id)

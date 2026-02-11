@@ -21,6 +21,7 @@
  */
 
 using SAM.Core.Models;
+using SAM.Core.Services;
 using SAM.Core.Tests.Mocks;
 using SAM.Core.ViewModels;
 
@@ -31,6 +32,7 @@ public class GamePickerViewModelTests
     private readonly MockSteamService _steamService;
     private readonly MockImageCacheService _imageCacheService;
     private readonly MockUserDataService _userDataService;
+    private readonly MockGameCacheService _gameCacheService;
     private readonly GamePickerViewModel _viewModel;
 
     public GamePickerViewModelTests()
@@ -38,7 +40,12 @@ public class GamePickerViewModelTests
         _steamService = new MockSteamService();
         _imageCacheService = new MockImageCacheService();
         _userDataService = new MockUserDataService();
-        _viewModel = new GamePickerViewModel(_steamService, _imageCacheService, _userDataService);
+        _gameCacheService = new MockGameCacheService();
+        _viewModel = new GamePickerViewModel(
+            () => _steamService,
+            () => _imageCacheService,
+            () => _userDataService,
+            () => _gameCacheService);
     }
 
     private static List<GameModel> CreateTestGames()
@@ -67,6 +74,34 @@ public class GamePickerViewModelTests
         // Assert
         Assert.Equal(testGames.Count, _viewModel.Games.Count);
         Assert.Equal(testGames.Count, _viewModel.FilteredGames.Count);
+    }
+
+    [Fact]
+    public async Task TryLoadCachedGamesAsync_LoadsCachedGames()
+    {
+        // Arrange
+        var cached = new CachedGameInfo
+        {
+            AppId = 440,
+            Name = "Team Fortress 2",
+            AchievementCount = 520,
+            UnlockedCount = 120,
+            HasDrm = false,
+            ImageUrl = "https://example.com/440.jpg",
+            LastUpdated = DateTime.UtcNow,
+            LastPlayed = null,
+            PlaytimeMinutes = 123
+        };
+        _gameCacheService.SetGame(cached);
+
+        // Act
+        var loaded = await _viewModel.TryLoadCachedGamesAsync();
+
+        // Assert
+        Assert.True(loaded);
+        Assert.Single(_viewModel.Games);
+        Assert.Equal(cached.AppId, _viewModel.Games[0].Id);
+        Assert.Equal(cached.Name, _viewModel.Games[0].Name);
     }
 
     [Fact]

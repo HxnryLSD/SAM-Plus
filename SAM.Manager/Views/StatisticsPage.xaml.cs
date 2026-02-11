@@ -34,6 +34,7 @@ namespace SAM.Manager.Views;
 /// </summary>
 public sealed partial class StatisticsPage : Page
 {
+    private readonly IAchievementService _achievementService;
     private readonly ObservableCollection<StatModel> _stats = new();
     private ulong _gameId;
     private string _gameName = string.Empty;
@@ -43,6 +44,7 @@ public sealed partial class StatisticsPage : Page
         Log.Method();
         try
         {
+            _achievementService = App.GetService<IAchievementService>();
             InitializeComponent();
             StatsListView.ItemsSource = _stats;
             Log.Debug("StatisticsPage initialized");
@@ -135,7 +137,8 @@ public sealed partial class StatisticsPage : Page
 
     private void SaveButton_Click(object sender, RoutedEventArgs e)
     {
-        var modifiedCount = _stats.Count(s => s.IsModified);
+        var modifiedStats = _stats.Where(s => s.IsModified).ToList();
+        var modifiedCount = modifiedStats.Count;
 
         if (modifiedCount == 0)
         {
@@ -143,10 +146,30 @@ public sealed partial class StatisticsPage : Page
             return;
         }
 
-        // TODO: Implement actual save via SteamService
-        foreach (var stat in _stats.Where(s => s.IsModified))
+        if (!_achievementService.IsReady)
         {
-            stat.IsModified = false;
+            ShowStatus("Statistiken sind noch nicht geladen", InfoBarSeverity.Error);
+            return;
+        }
+
+        foreach (var stat in modifiedStats)
+        {
+            if (!_achievementService.SetStatistic(stat.Id, stat.Value))
+            {
+                ShowStatus($"Fehler beim Setzen von {stat.Id}. Speichern abgebrochen", InfoBarSeverity.Error);
+                return;
+            }
+        }
+
+        if (!_achievementService.StoreStats())
+        {
+            ShowStatus("Speichern fehlgeschlagen", InfoBarSeverity.Error);
+            return;
+        }
+
+        foreach (var stat in modifiedStats)
+        {
+            stat.AcceptChanges();
         }
 
         ShowStatus($"{modifiedCount} Statistik(en) gespeichert", InfoBarSeverity.Success);

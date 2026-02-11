@@ -30,7 +30,8 @@ namespace SAM.Core.Utilities;
 /// ├── Userdata/{SteamID}/{GameID}/
 /// ├── Cache/Cover/
 /// ├── Cache/Widecover/
-/// └── settings.json
+/// ├── settings.json
+/// └── settings.db
 /// </summary>
 public static class AppPaths
 {
@@ -83,6 +84,11 @@ public static class AppPaths
         return Path.Combine(BasePath, "games.db");
     });
 
+    private static readonly Lazy<string> _settingsDatabasePath = new(() =>
+    {
+        return Path.Combine(BasePath, "settings.db");
+    });
+
     /// <summary>
     /// Gets the base SAM application data path (%localappdata%/SAM/).
     /// </summary>
@@ -117,6 +123,11 @@ public static class AppPaths
     /// Gets the settings file path.
     /// </summary>
     public static string SettingsFilePath => Path.Combine(BasePath, "settings.json");
+
+    /// <summary>
+    /// Gets the shared settings database file path.
+    /// </summary>
+    public static string SettingsDatabasePath => _settingsDatabasePath.Value;
 
     /// <summary>
     /// Gets the SQLite database file path (%localappdata%/SAM/games.db).

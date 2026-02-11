@@ -21,6 +21,7 @@
  */
 
 using System.Text.Json;
+using Microsoft.Data.Sqlite;
 using SAM.Core.Utilities;
 
 namespace SAM.Core.Services;
@@ -31,11 +32,16 @@ namespace SAM.Core.Services;
 public class SettingsService : ISettingsService
 {
     private readonly string _settingsFilePath;
+    private readonly string _settingsDatabasePath;
     private SettingsData _settings = new();
+
+    private const string SharedSettingsTable = "Settings";
+    private const string SharedSettingsKey = "SettingsData";
 
     public SettingsService()
     {
         _settingsFilePath = AppPaths.SettingsFilePath;
+        _settingsDatabasePath = AppPaths.SettingsDatabasePath;
     }
 
     public string Theme
@@ -80,19 +86,49 @@ public class SettingsService : ISettingsService
         set => _settings.GameViewType = value;
     }
 
+    public bool UseSharedSettings
+    {
+        get => _settings.UseSharedSettings;
+        set => _settings.UseSharedSettings = value;
+    }
+
+    public bool AutoUpdateEnabled
+    {
+        get => _settings.AutoUpdateEnabled;
+        set => _settings.AutoUpdateEnabled = value;
+    }
+
+    public bool UseSystemAccentColor
+    {
+        get => _settings.UseSystemAccentColor;
+        set => _settings.UseSystemAccentColor = value;
+    }
+
+    public string AccentColor
+    {
+        get => _settings.AccentColor;
+        set => _settings.AccentColor = value;
+    }
+
     public string ImageCachePath => _settings.ImageCachePath;
 
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
         try
         {
-            if (File.Exists(_settingsFilePath))
+            _settings = await LoadLocalAsync(cancellationToken);
+
+            if (_settings.UseSharedSettings)
             {
-                var json = await File.ReadAllTextAsync(_settingsFilePath, cancellationToken);
-                var loaded = JsonSerializer.Deserialize<SettingsData>(json);
-                if (loaded != null)
+                var shared = await LoadSharedAsync(cancellationToken);
+                if (shared != null)
                 {
-                    _settings = loaded;
+                    shared.UseSharedSettings = true;
+                    _settings = shared;
+                }
+                else
+                {
+                    Log.Warn("Shared settings enabled but no shared settings found. Using local settings.");
                 }
             }
         }
@@ -115,11 +151,12 @@ public class SettingsService : ISettingsService
     {
         try
         {
-            var json = JsonSerializer.Serialize(_settings, new JsonSerializerOptions
+            if (_settings.UseSharedSettings)
             {
-                WriteIndented = true
-            });
-            await File.WriteAllTextAsync(_settingsFilePath, json, cancellationToken);
+                await SaveSharedAsync(_settings, cancellationToken);
+            }
+
+            await SaveLocalAsync(_settings, cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -136,6 +173,98 @@ public class SettingsService : ISettingsService
         _settings = new SettingsData();
     }
 
+    private async Task<SettingsData> LoadLocalAsync(CancellationToken cancellationToken)
+    {
+        if (!File.Exists(_settingsFilePath))
+        {
+            return new SettingsData();
+        }
+
+        var json = await File.ReadAllTextAsync(_settingsFilePath, cancellationToken);
+        var loaded = JsonSerializer.Deserialize<SettingsData>(json);
+        return loaded ?? new SettingsData();
+    }
+
+    private async Task SaveLocalAsync(SettingsData settings, CancellationToken cancellationToken)
+    {
+        var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions
+        {
+            WriteIndented = true
+        });
+        await File.WriteAllTextAsync(_settingsFilePath, json, cancellationToken);
+    }
+
+    private async Task<SettingsData?> LoadSharedAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var connection = new SqliteConnection($"Data Source={_settingsDatabasePath}");
+            await connection.OpenAsync(cancellationToken);
+
+            await using (var create = connection.CreateCommand())
+            {
+                create.CommandText = $"CREATE TABLE IF NOT EXISTS {SharedSettingsTable} (Key TEXT PRIMARY KEY, Value TEXT NOT NULL);";
+                await create.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            await using var command = connection.CreateCommand();
+            command.CommandText = $"SELECT Value FROM {SharedSettingsTable} WHERE Key = @Key;";
+            command.Parameters.AddWithValue("@Key", SharedSettingsKey);
+
+            var result = await command.ExecuteScalarAsync(cancellationToken);
+            if (result is not string json || string.IsNullOrWhiteSpace(json))
+            {
+                return null;
+            }
+
+            var loaded = JsonSerializer.Deserialize<SettingsData>(json);
+            return loaded;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Log.Warn($"Failed to load shared settings: {ex.Message}");
+            return null;
+        }
+    }
+
+    private async Task SaveSharedAsync(SettingsData settings, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await using var connection = new SqliteConnection($"Data Source={_settingsDatabasePath}");
+            await connection.OpenAsync(cancellationToken);
+
+            await using (var create = connection.CreateCommand())
+            {
+                create.CommandText = $"CREATE TABLE IF NOT EXISTS {SharedSettingsTable} (Key TEXT PRIMARY KEY, Value TEXT NOT NULL);";
+                await create.ExecuteNonQueryAsync(cancellationToken);
+            }
+
+            var json = JsonSerializer.Serialize(settings, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+
+            await using var command = connection.CreateCommand();
+            command.CommandText = $"INSERT INTO {SharedSettingsTable} (Key, Value) VALUES (@Key, @Value) ON CONFLICT(Key) DO UPDATE SET Value = excluded.Value;";
+            command.Parameters.AddWithValue("@Key", SharedSettingsKey);
+            command.Parameters.AddWithValue("@Value", json);
+            await command.ExecuteNonQueryAsync(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Log.Warn($"Failed to save shared settings: {ex.Message}");
+        }
+    }
+
     private class SettingsData
     {
         public string Theme { get; set; } = "System";
@@ -145,6 +274,10 @@ public class SettingsService : ISettingsService
         public bool WarnOnUnsavedChanges { get; set; } = true;
         public bool ShowHiddenAchievements { get; set; } = true;
         public int GameViewType { get; set; } = 0; // 0=Default, 1=Compact, 2=Detail
+        public bool UseSharedSettings { get; set; } = false;
+        public bool AutoUpdateEnabled { get; set; } = true;
+        public bool UseSystemAccentColor { get; set; } = true;
+        public string AccentColor { get; set; } = "#FF0078D4";
         public string ImageCachePath { get; set; } = "";
     }
 }

@@ -68,7 +68,7 @@ public class AchievementService : IAchievementService
         // Set up callback service with new client
         if (_steamService.Client != null)
         {
-            ((SteamCallbackService)_callbackService).SetClient(_steamService.Client);
+            _callbackService.SetClient(_steamService.Client);
             _callbackService.StartCallbackLoop();
         }
 

@@ -113,6 +113,38 @@ public class SettingsServiceTests
     }
 
     [Fact]
+    public void UseSharedSettings_DefaultValue_IsFalse()
+    {
+        var service = new MockSettingsService();
+
+        Assert.False(service.UseSharedSettings);
+    }
+
+    [Fact]
+    public void AutoUpdateEnabled_DefaultValue_IsTrue()
+    {
+        var service = new MockSettingsService();
+
+        Assert.True(service.AutoUpdateEnabled);
+    }
+
+    [Fact]
+    public void UseSystemAccentColor_DefaultValue_IsTrue()
+    {
+        var service = new MockSettingsService();
+
+        Assert.True(service.UseSystemAccentColor);
+    }
+
+    [Fact]
+    public void AccentColor_DefaultValue_IsNotEmpty()
+    {
+        var service = new MockSettingsService();
+
+        Assert.False(string.IsNullOrWhiteSpace(service.AccentColor));
+    }
+
+    [Fact]
     public async Task LoadAsync_SetsLoadAsyncCalled()
     {
         // Arrange

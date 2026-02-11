@@ -254,6 +254,22 @@
                    Style="{StaticResource TitleLargeTextBlockStyle}"
                    Margin="0,0,0,16"/>
 
+        <StackPanel x:Name="RefreshIndicator"
+                Grid.Row="0"
+                Orientation="Horizontal"
+                HorizontalAlignment="Right"
+                VerticalAlignment="Center"
+                Spacing="8"
+                Margin="0,0,0,16"
+                IsHitTestVisible="False"
+                Visibility="{x:Bind ViewModel.IsBackgroundRefresh, Converter={StaticResource BoolToVisibilityConverter}}">
+            <ProgressRing IsActive="True" Width="16" Height="16"/>
+            <TextBlock x:Name="RefreshIndicatorText"
+                   Text="Aktualisiere..."
+                   Style="{StaticResource CaptionTextBlockStyle}"
+                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+        </StackPanel>
+
         <!-- Search and Filter Bar -->
         <Grid Grid.Row="1" Margin="0,0,0,16">
             <Grid.ColumnDefinitions>

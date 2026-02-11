@@ -21,6 +21,7 @@
  */
 
 using System.Collections.ObjectModel;
+using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using SAM.Core.Models;
@@ -33,9 +34,14 @@ namespace SAM.Core.ViewModels;
 /// </summary>
 public partial class GamePickerViewModel : ViewModelBase
 {
-    private readonly ISteamService _steamService;
-    private readonly IImageCacheService _imageCacheService;
-    private readonly IUserDataService _userDataService;
+    private readonly Func<ISteamService> _steamServiceFactory;
+    private readonly Func<IImageCacheService> _imageCacheServiceFactory;
+    private readonly Func<IUserDataService> _userDataServiceFactory;
+    private readonly Func<IGameCacheService> _gameCacheServiceFactory;
+    private ISteamService? _steamService;
+    private IImageCacheService? _imageCacheService;
+    private IUserDataService? _userDataService;
+    private IGameCacheService? _gameCacheService;
 
     [ObservableProperty]
     private ObservableCollection<GameModel> _games = [];
@@ -58,14 +64,42 @@ public partial class GamePickerViewModel : ViewModelBase
     [ObservableProperty]
     private string? _currentUserInfo;
 
+    [ObservableProperty]
+    private bool _isBackgroundRefresh;
+
+    [ObservableProperty]
+    private bool _hasCachedGames;
+
     public GamePickerViewModel(
-        ISteamService steamService, 
-        IImageCacheService imageCacheService,
-        IUserDataService userDataService)
+        Func<ISteamService> steamServiceFactory,
+        Func<IImageCacheService> imageCacheServiceFactory,
+        Func<IUserDataService> userDataServiceFactory,
+        Func<IGameCacheService> gameCacheServiceFactory)
     {
-        _steamService = steamService;
-        _imageCacheService = imageCacheService;
-        _userDataService = userDataService;
+        _steamServiceFactory = steamServiceFactory;
+        _imageCacheServiceFactory = imageCacheServiceFactory;
+        _userDataServiceFactory = userDataServiceFactory;
+        _gameCacheServiceFactory = gameCacheServiceFactory;
+    }
+
+    private ISteamService SteamService => _steamService ??= _steamServiceFactory();
+    private IImageCacheService ImageCacheService => _imageCacheService ??= _imageCacheServiceFactory();
+    private IUserDataService UserDataService => _userDataService ??= _userDataServiceFactory();
+    private IGameCacheService GameCacheService => _gameCacheService ??= _gameCacheServiceFactory();
+
+    public async Task<bool> TryLoadCachedGamesAsync(CancellationToken cancellationToken = default)
+    {
+        var cachedGames = await GameCacheService.GetAllGamesAsync(cancellationToken);
+        if (cachedGames.Count == 0)
+        {
+            return false;
+        }
+
+        var games = cachedGames.Select(CreateGameModelFromCache);
+        Games = new ObservableCollection<GameModel>(games);
+        ApplyFilter();
+        HasCachedGames = true;
+        return true;
     }
 
     partial void OnSearchTextChanged(string value)
@@ -83,46 +117,65 @@ public partial class GamePickerViewModel : ViewModelBase
     {
         await ExecuteWithBusyAsync(async (ct) =>
         {
-            if (!_steamService.IsInitialized)
+            var useBackgroundRefresh = HasCachedGames && Games.Count > 0;
+            if (useBackgroundRefresh)
             {
-                _steamService.Initialize();
+                IsBackgroundRefresh = true;
             }
 
-            // Set the current user from Steam ID for user data persistence
-            var steamId = _steamService.SteamId.ToString();
-            _userDataService.SetCurrentUser(steamId);
-            Log.Info($"UserData service initialized for Steam user: {steamId}");
-            CurrentUserInfo = steamId;
-
-            // Load saved user data for all games
-            var savedUserData = await _userDataService.GetAllGameDataAsync(ct);
-            Log.Info($"Loaded saved data for {savedUserData.Count} games");
-
-            var games = await _steamService.GetOwnedGamesAsync(ct);
-            
-            // Merge saved user data with game list
-            foreach (var game in games)
+            try
             {
-                if (savedUserData.TryGetValue(game.Id, out var userData))
+                await Task.Run(() =>
                 {
-                    // Apply saved DRM protection info
-                    game.HasDrmProtection = userData.HasDrmProtection;
-                    game.ProtectedAchievementCount = userData.ProtectedAchievementCount;
-                    game.DrmProtectionInfo = userData.DrmProtectionInfo;
-                    
-                    // Apply saved achievement counts if available
-                    if (userData.IsInitialized)
+                    if (!SteamService.IsInitialized)
                     {
-                        game.AchievementCount = userData.TotalAchievementCount;
-                        game.UnlockedAchievementCount = userData.UnlockedAchievementCount;
+                        SteamService.Initialize();
                     }
-                    
-                    Log.Debug($"Applied saved data for {game.Name} (DRM: {game.HasDrmProtection})");
+                }, ct);
+
+                // Set the current user from Steam ID for user data persistence
+                var steamId = SteamService.SteamId.ToString();
+                UserDataService.SetCurrentUser(steamId);
+                Log.Info($"UserData service initialized for Steam user: {steamId}");
+                CurrentUserInfo = steamId;
+
+                // Load saved user data for all games
+                var savedUserData = await UserDataService.GetAllGameDataAsync(ct);
+                Log.Info($"Loaded saved data for {savedUserData.Count} games");
+
+                var games = (await SteamService.GetOwnedGamesAsync(ct)).ToList();
+
+                // Merge saved user data with game list
+                foreach (var game in games)
+                {
+                    if (savedUserData.TryGetValue(game.Id, out var userData))
+                    {
+                        // Apply saved DRM protection info
+                        game.HasDrmProtection = userData.HasDrmProtection;
+                        game.ProtectedAchievementCount = userData.ProtectedAchievementCount;
+                        game.DrmProtectionInfo = userData.DrmProtectionInfo;
+
+                        // Apply saved achievement counts if available
+                        if (userData.IsInitialized)
+                        {
+                            game.AchievementCount = userData.TotalAchievementCount;
+                            game.UnlockedAchievementCount = userData.UnlockedAchievementCount;
+                        }
+
+                        Log.Debug($"Applied saved data for {game.Name} (DRM: {game.HasDrmProtection})");
+                    }
                 }
+
+                Games = new ObservableCollection<GameModel>(games);
+                ApplyFilter();
+                HasCachedGames = false;
+
+                await SaveGamesToCacheAsync(games, savedUserData, steamId, ct);
             }
-            
-            Games = new ObservableCollection<GameModel>(games);
-            ApplyFilter();
+            finally
+            {
+                IsBackgroundRefresh = false;
+            }
         });
     }
 
@@ -137,6 +190,8 @@ public partial class GamePickerViewModel : ViewModelBase
         try
         {
             IsRefreshing = true;
+            HasCachedGames = false;
+            IsBackgroundRefresh = false;
             CancelOperations(); // Cancel any previous load operation
             Games.Clear();
             FilteredGames.Clear();
@@ -168,7 +223,7 @@ public partial class GamePickerViewModel : ViewModelBase
         if (!string.IsNullOrWhiteSpace(SearchText))
         {
             var search = SearchText.ToLowerInvariant();
-            filtered = filtered.Where(g => 
+            filtered = filtered.Where(g =>
                 g.Name.ToLowerInvariant().Contains(search) ||
                 g.Id.ToString().Contains(search));
         }
@@ -184,6 +239,57 @@ public partial class GamePickerViewModel : ViewModelBase
         };
 
         FilteredGames = new ObservableCollection<GameModel>(filtered);
+    }
+
+    private static GameModel CreateGameModelFromCache(CachedGameInfo cached)
+    {
+        return new GameModel
+        {
+            Id = cached.AppId,
+            Name = cached.Name,
+            ImageUrl = cached.ImageUrl,
+            AchievementCount = cached.AchievementCount,
+            UnlockedAchievementCount = cached.UnlockedCount,
+            HasDrmProtection = cached.HasDrm,
+            ProtectedAchievementCount = 0,
+            DrmProtectionInfo = null
+        };
+    }
+
+    private static CachedGameInfo CreateCachedGameInfo(
+        GameModel game,
+        GameUserData? userData)
+    {
+        return new CachedGameInfo
+        {
+            AppId = game.Id,
+            Name = game.Name,
+            AchievementCount = game.AchievementCount,
+            UnlockedCount = game.UnlockedAchievementCount,
+            HasDrm = game.HasDrmProtection,
+            ImageUrl = game.ImageUrl,
+            LastUpdated = DateTime.UtcNow,
+            LastPlayed = null,
+            PlaytimeMinutes = userData?.PlaytimeMinutes ?? 0
+        };
+    }
+
+    private async Task SaveGamesToCacheAsync(
+        IReadOnlyList<GameModel> games,
+        IReadOnlyDictionary<uint, GameUserData> savedUserData,
+        string steamId,
+        CancellationToken cancellationToken)
+    {
+        if (games.Count == 0)
+        {
+            return;
+        }
+
+        var cachedGames = games
+            .Select(game => CreateCachedGameInfo(game, savedUserData.GetValueOrDefault(game.Id)))
+            .ToList();
+
+        await GameCacheService.SaveGamesAsync(cachedGames, steamId, cancellationToken);
     }
 }
 

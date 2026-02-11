@@ -146,6 +146,8 @@ public partial class App : Application
             {
                 themeService.SetTheme(themeService.CurrentTheme);
             }
+
+            await CheckForUpdatesAsync(cancellationToken);
         }
         catch (OperationCanceledException)
         {
@@ -155,6 +157,44 @@ public partial class App : Application
         {
             System.Diagnostics.Debug.WriteLine($"Service initialization exception: {ex}");
         }
+    }
+
+    private async Task CheckForUpdatesAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var settingsService = GetService<ISettingsService>();
+            if (!settingsService.AutoUpdateEnabled)
+            {
+                return;
+            }
+
+            var updateService = GetService<IUpdateService>();
+            var currentVersion = GetCurrentVersion();
+            var result = await updateService.CheckForUpdateAsync(currentVersion, cancellationToken);
+
+            if (result.IsUpdateAvailable && result.LatestVersion != null)
+            {
+                var notificationService = GetService<INotificationService>();
+                notificationService.ShowInfo(
+                    "Update available",
+                    $"Version {result.LatestVersion} is available on GitHub.");
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // App is shutting down, ignore
+        }
+        catch (Exception ex)
+        {
+            Log.Warn($"Update check failed: {ex.Message}");
+        }
+    }
+
+    private static string GetCurrentVersion()
+    {
+        var version = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version;
+        return version?.ToString() ?? "8.0.0";
     }
 
     /// <summary>

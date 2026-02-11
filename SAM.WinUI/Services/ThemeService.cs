@@ -49,6 +49,7 @@ public class ThemeService : IThemeService
         if (!cancellationToken.IsCancellationRequested)
         {
             SetTheme(_settingsService.Theme);
+            ApplyAccentColor(_settingsService.UseSystemAccentColor, _settingsService.AccentColor);
         }
     }
 
@@ -79,6 +80,21 @@ public class ThemeService : IThemeService
         SetTheme(theme);
     }
 
+    public void ApplyAccentColor(bool useSystemAccentColor, string accentColor)
+    {
+        var color = useSystemAccentColor
+            ? GetSystemAccentColor()
+            : TryParseColor(accentColor, out var parsed)
+                ? parsed
+                : GetSystemAccentColor();
+
+        ApplyAccentResources(color);
+
+        _settingsService.UseSystemAccentColor = useSystemAccentColor;
+        _settingsService.AccentColor = useSystemAccentColor ? _settingsService.AccentColor : accentColor;
+        _ = _settingsService.SaveAsync();
+    }
+
     private static void ApplyTheme(ElementTheme theme)
     {
         var window = App.Current.MainWindow;
@@ -89,6 +105,61 @@ public class ThemeService : IThemeService
         
         // Update title bar button colors for the current theme
         UpdateTitleBarColors(theme, window);
+    }
+
+    private static void ApplyAccentResources(Color color)
+    {
+        var resources = Application.Current.Resources;
+
+        resources["SystemAccentColor"] = color;
+        resources["SystemAccentColorLight1"] = Blend(color, Colors.White, 0.3);
+        resources["SystemAccentColorLight2"] = Blend(color, Colors.White, 0.5);
+        resources["SystemAccentColorLight3"] = Blend(color, Colors.White, 0.7);
+        resources["SystemAccentColorDark1"] = Blend(color, Colors.Black, 0.2);
+        resources["SystemAccentColorDark2"] = Blend(color, Colors.Black, 0.4);
+        resources["SystemAccentColorDark3"] = Blend(color, Colors.Black, 0.6);
+    }
+
+    private static Color GetSystemAccentColor()
+    {
+        var uiSettings = new Windows.UI.ViewManagement.UISettings();
+        var color = uiSettings.GetColorValue(Windows.UI.ViewManagement.UIColorType.Accent);
+        return Color.FromArgb(color.A, color.R, color.G, color.B);
+    }
+
+    private static bool TryParseColor(string value, out Color color)
+    {
+        color = default;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var trimmed = value.Trim().TrimStart('#');
+        if (trimmed.Length == 6 && uint.TryParse(trimmed, System.Globalization.NumberStyles.HexNumber, null, out var rgb))
+        {
+            color = Color.FromArgb(255, (byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
+            return true;
+        }
+
+        if (trimmed.Length == 8 && uint.TryParse(trimmed, System.Globalization.NumberStyles.HexNumber, null, out var argb))
+        {
+            color = Color.FromArgb((byte)(argb >> 24), (byte)(argb >> 16), (byte)(argb >> 8), (byte)argb);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static Color Blend(Color color, Color target, double amount)
+    {
+        static byte Mix(byte from, byte to, double t) => (byte)Math.Clamp(from + (to - from) * t, 0, 255);
+
+        return Color.FromArgb(
+            255,
+            Mix(color.R, target.R, amount),
+            Mix(color.G, target.G, amount),
+            Mix(color.B, target.B, amount));
     }
     
     private static void UpdateTitleBarColors(ElementTheme theme, Window? window)

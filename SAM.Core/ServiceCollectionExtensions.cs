@@ -48,6 +48,17 @@ public static class ServiceCollectionExtensions
             services.AddSingleton<ILibraryFetchService, LibraryFetchService>();
             services.AddSingleton<IGameCacheService, GameCacheService>();
             services.AddTransient<IAchievementService, AchievementService>();
+
+            services.AddTransient<Func<ISteamService>>(sp => () => sp.GetRequiredService<ISteamService>());
+            services.AddTransient<Func<IImageCacheService>>(sp => () => sp.GetRequiredService<IImageCacheService>());
+            services.AddTransient<Func<IUserDataService>>(sp => () => sp.GetRequiredService<IUserDataService>());
+            services.AddTransient<Func<IGameCacheService>>(sp => () => sp.GetRequiredService<IGameCacheService>());
+
+            services.AddHttpClient<IUpdateService, UpdateService>()
+                .ConfigureHttpClient(client =>
+                {
+                    client.DefaultRequestHeaders.Add("User-Agent", "SAM/8.0");
+                });
         
             // Register HttpClient for ImageCacheService using typed client pattern
             // Enable HTTP/2 for multiplexed parallel downloads

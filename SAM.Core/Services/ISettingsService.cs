@@ -63,6 +63,26 @@ public interface ISettingsService
     int GameViewType { get; set; }
 
     /// <summary>
+    /// Gets or sets whether settings are shared between SAM.WinUI and SAM.Manager.
+    /// </summary>
+    bool UseSharedSettings { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether to check for updates at startup.
+    /// </summary>
+    bool AutoUpdateEnabled { get; set; }
+
+    /// <summary>
+    /// Gets or sets whether to use the system accent color.
+    /// </summary>
+    bool UseSystemAccentColor { get; set; }
+
+    /// <summary>
+    /// Gets or sets the custom accent color (hex).
+    /// </summary>
+    string AccentColor { get; set; }
+
+    /// <summary>
     /// Gets or sets the image cache directory path.
     /// </summary>
     string ImageCachePath { get; }

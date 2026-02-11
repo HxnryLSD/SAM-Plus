@@ -177,6 +177,40 @@ public partial class App : Application
         }
         
         Log.Info($"SAM.Manager launched for game ID: {GameId}");
+        _ = CheckForUpdatesAsync();
         Log.MethodExit();
+    }
+
+    private async Task CheckForUpdatesAsync()
+    {
+        try
+        {
+            var settingsService = GetService<ISettingsService>();
+            await settingsService.LoadAsync();
+
+            if (!settingsService.AutoUpdateEnabled)
+            {
+                return;
+            }
+
+            var updateService = GetService<IUpdateService>();
+            var currentVersion = GetCurrentVersion();
+            var result = await updateService.CheckForUpdateAsync(currentVersion);
+
+            if (result.IsUpdateAvailable && result.LatestVersion != null)
+            {
+                Log.Info($"Update available: v{result.LatestVersion} ({result.ReleaseUrl})");
+            }
+        }
+        catch (Exception ex)
+        {
+            Log.Warn($"Update check failed: {ex.Message}");
+        }
+    }
+
+    private static string GetCurrentVersion()
+    {
+        var version = System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version;
+        return version?.ToString() ?? "8.0.0";
     }
 }

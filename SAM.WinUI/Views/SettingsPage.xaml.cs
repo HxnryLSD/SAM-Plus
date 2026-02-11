@@ -25,6 +25,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using SAM.Core.Services;
 using SAM.WinUI.Services;
+using Windows.UI;
 
 namespace SAM.WinUI.Views;
 
@@ -62,6 +63,14 @@ public sealed partial class SettingsPage : Page
         // Load behavior settings
         WarnUnsavedToggle.IsOn = _settingsService.WarnOnUnsavedChanges;
         ShowHiddenToggle.IsOn = _settingsService.ShowHiddenAchievements;
+        SyncSettingsToggle.IsOn = _settingsService.UseSharedSettings;
+        AutoUpdateToggle.IsOn = _settingsService.AutoUpdateEnabled;
+
+        AccentColorModeComboBox.SelectedIndex = _settingsService.UseSystemAccentColor ? 0 : 1;
+        AccentColorPicker.Color = TryParseColor(_settingsService.AccentColor, out var color)
+            ? color
+            : GetSystemAccentColor();
+        AccentColorPicker.Visibility = _settingsService.UseSystemAccentColor ? Visibility.Collapsed : Visibility.Visible;
         
         // Show last fetch status
         UpdateFetchStatus();
@@ -107,6 +116,11 @@ public sealed partial class SettingsPage : Page
         ThemeSystemItem.Content = Loc.Get("Settings.Theme.System");
         ThemeLightItem.Content = Loc.Get("Settings.Theme.Light");
         ThemeDarkItem.Content = Loc.Get("Settings.Theme.Dark");
+
+        AccentColorTitleText.Text = Loc.Get("Settings.AccentColor");
+        AccentColorDescriptionText.Text = Loc.Get("Settings.AccentColorDescription");
+        AccentSystemItem.Content = Loc.Get("Settings.AccentColor.System");
+        AccentCustomItem.Content = Loc.Get("Settings.AccentColor.Custom");
         
         // Language setting
         LanguageTitleText.Text = Loc.Get("Settings.Language");
@@ -118,6 +132,10 @@ public sealed partial class SettingsPage : Page
         WarnUnsavedDescriptionText.Text = Loc.Get("Settings.WarnUnsavedDescription");
         ShowHiddenTitleText.Text = Loc.Get("Settings.ShowHidden");
         ShowHiddenDescriptionText.Text = Loc.Get("Settings.ShowHiddenDescription");
+        SyncSettingsTitleText.Text = Loc.Get("Settings.SyncSettings");
+        SyncSettingsDescriptionText.Text = Loc.Get("Settings.SyncSettingsDescription");
+        AutoUpdateTitleText.Text = Loc.Get("Settings.AutoUpdate");
+        AutoUpdateDescriptionText.Text = Loc.Get("Settings.AutoUpdateDescription");
         
         // Data section
         DataSectionText.Text = Loc.Get("Settings.Data");
@@ -175,6 +193,59 @@ public sealed partial class SettingsPage : Page
         }
     }
 
+    private void AccentColorModeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_isInitializing) return;
+
+        var useSystem = AccentColorModeComboBox.SelectedIndex == 0;
+        AccentColorPicker.Visibility = useSystem ? Visibility.Collapsed : Visibility.Visible;
+
+        _themeService.ApplyAccentColor(useSystem, _settingsService.AccentColor);
+    }
+
+    private void AccentColorPicker_ColorChanged(ColorPicker sender, ColorChangedEventArgs args)
+    {
+        if (_isInitializing) return;
+
+        if (AccentColorModeComboBox.SelectedIndex != 1)
+        {
+            return;
+        }
+
+        var hex = $"#{args.NewColor.A:X2}{args.NewColor.R:X2}{args.NewColor.G:X2}{args.NewColor.B:X2}";
+        _themeService.ApplyAccentColor(false, hex);
+    }
+
+    private static bool TryParseColor(string value, out Color color)
+    {
+        color = default;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        var trimmed = value.Trim().TrimStart('#');
+        if (trimmed.Length == 6 && uint.TryParse(trimmed, System.Globalization.NumberStyles.HexNumber, null, out var rgb))
+        {
+            color = Color.FromArgb(255, (byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb);
+            return true;
+        }
+
+        if (trimmed.Length == 8 && uint.TryParse(trimmed, System.Globalization.NumberStyles.HexNumber, null, out var argb))
+        {
+            color = Color.FromArgb((byte)(argb >> 24), (byte)(argb >> 16), (byte)(argb >> 8), (byte)argb);
+            return true;
+        }
+
+        return false;
+    }
+
+    private static Color GetSystemAccentColor()
+    {
+        var uiSettings = new Windows.UI.ViewManagement.UISettings();
+        return uiSettings.GetColorValue(Windows.UI.ViewManagement.UIColorType.Accent);
+    }
+
     private async void WarnUnsavedToggle_Toggled(object sender, RoutedEventArgs e)
     {
         if (_isInitializing) return;
@@ -188,6 +259,22 @@ public sealed partial class SettingsPage : Page
         if (_isInitializing) return;
         
         _settingsService.ShowHiddenAchievements = ShowHiddenToggle.IsOn;
+        await _settingsService.SaveAsync();
+    }
+
+    private async void SyncSettingsToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_isInitializing) return;
+
+        _settingsService.UseSharedSettings = SyncSettingsToggle.IsOn;
+        await _settingsService.SaveAsync();
+    }
+
+    private async void AutoUpdateToggle_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_isInitializing) return;
+
+        _settingsService.AutoUpdateEnabled = AutoUpdateToggle.IsOn;
         await _settingsService.SaveAsync();
     }
     
