@@ -191,7 +191,7 @@ namespace SAM.API.Wrappers
         [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
         private delegate IntPtr NativeGetAchievementDisplayAttribute(IntPtr self, IntPtr name, IntPtr key);
 
-        public string GetAchievementDisplayAttribute(string name, string key)
+        public string? GetAchievementDisplayAttribute(string name, string key)
         {
             using (var nativeName = NativeStrings.StringToStringHandle(name))
             using (var nativeKey = NativeStrings.StringToStringHandle(key))

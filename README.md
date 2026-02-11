@@ -1,206 +1,102 @@
-# Steam Achievement Manager Plus (SAM-Plus)
+# Steam Achievement Manager
 
-<p align="center">
-  <strong>🎮 Modern Steam Achievement Management</strong><br>
-  <em>Unlock, reset achievements and edit statistics – with a sleek Dark Mode UI</em>
-</p>
+Steam Achievement Manager (SAM) is a lightweight application used to manage achievements and statistics in the popular PC gaming platform **Steam**.
 
----
-
-## 🖼️ Preview
-
-<p align="center">
-  <img src="https://github.com/HxnryLSD/SAM-Plus/blob/master/PreviewImg/SAM.Picker.webp?raw=true" alt="Game Picker" width="600"/><br>
-  <em>Game Picker – Browse and select from your Steam library</em>
-</p>
-
-<p align="center">
-  <img src="https://github.com/HxnryLSD/SAM-Plus/blob/master/PreviewImg/SAM.Game.webp?raw=true" alt="Achievement Manager" width="600"/><br>
-  <em>Achievement Manager – Unlock or reset achievements with one click</em>
-</p>
+> [!IMPORTANT]
+> This application requires the [Steam client](https://store.steampowered.com/about/), a Steam account, and network access. Steam must be running and the user must be logged in.
 
 ---
 
-## ✨ Features
+## 🎮 Version 8.0 — WinUI 3
 
-### 🖥️ Modern Dark Theme UI
-- **Borderless Window Design** with custom Title Bar
-- **Dark Mode** throughout – no white elements
-- **Smooth Scrolling** with momentum effect
-- **Responsive Layout** – freely resizable window
-- **Custom Scrollbars** in Store design
+Version 8.0 introduces a completely modernized user interface built with **WinUI 3** and the **Windows App SDK**.
 
-### 🎯 Achievement Management
-- View all achievements for a game
-- **Unlock or reset** individually or all at once
-- Display unlock timestamps
-- Automatically load achievement icons
+### ✨ Features
 
-### 📊 Statistics Editor
-- View and edit game statistics
-- Supports integer and float values
-- Save changes with one click
+| Feature | Description |
+|---------|-------------|
+| 🎨 **Modern Fluent Design** | Native Windows 11 look with Mica backdrop |
+| 🌙 **Dark/Light Mode** | Automatic theme support following system settings |
+| 📐 **Better Scaling** | Improved DPI support and touch-friendly controls |
+| ⚡ **Improved Performance** | Modern async architecture with MVVM pattern |
+| 🛠️ **Maintainable Codebase** | Clean separation of concerns with dependency injection |
+| 🔄 **Two-App Architecture** | SAM.WinUI (Game Picker) + SAM.Manager (per-game Achievement Manager) |
 
-### 🛡️ Protection Detection
-- **Automatic detection** of protected achievements/stats via Steam schema
-- **Visual warnings** in Game Picker (🔒 icon, colored background)
-- **Detailed info** showing protected achievement and stat counts
-- **Modification blocking** for protected items to prevent issues
+### 🏗️ Architecture
 
-### ⚡ Performance
-- **.NET 8.0** – faster than .NET Framework
-- **Async Icon Loading** – no UI freezes
-- **Parallel Downloads** – icons load simultaneously
-- **Bitmap Pool** – efficient memory management
+SAM 8.0 uses a **two-application architecture** to solve Steam's AppID binding issue:
+
+| Application       | Purpose                               | Steam AppID     |
+|-------------------|---------------------------------------|-----------------|
+| **SAM.WinUI**     | Game picker, lists your owned games   | `0` (no game)   |
+| **SAM.Manager**   | Achievement manager for a single game | Game-specific   |
+
+> [!TIP]
+> When you select a game in SAM.WinUI, it launches SAM.Manager with the correct Steam AppID, allowing proper achievement management.
 
 ---
 
-## 📋 Requirements
+## 📥 Downloads
 
-| Component | Version | Note |
-|-----------|---------|------|
-| **Windows** | 10 / 11 | x86 or x64 |
-| **Steam Client** | Latest | Must be running, user logged in |
-| **.NET Runtime** | [8.0 Desktop (x86)](https://dotnet.microsoft.com/download/dotnet/8.0) | **x86 version required!** |
-
-> ⚠️ **Important:** The x86 version of the .NET Runtime is mandatory, as Steam native DLLs are only available as 32-bit.
+| Version | Download | Description |
+|---------|----------|-------------|
+| **SAM v8.0** | [Latest Release](https://github.com/gibbed/SteamAchievementManager/releases/latest) | Recommended, modern WinUI 3 version |
+| **SAM Classic (v7.x)** | [All Releases](https://github.com/gibbed/SteamAchievementManager/releases) | Legacy WinForms version |
 
 ---
 
-## 🚀 Installation
+## 💻 System Requirements
 
-### Option 1: Download Release
-1. Download the latest release from the [Releases page](../../releases)
-2. Extract the ZIP
-3. Run `SAM.Picker.exe`
+### SAM v8.0 (WinUI 3)
 
-### Option 2: Build Yourself
-```powershell
-# Clone repository
-git clone https://github.com/username/SAM-Plus.git
-cd SAM-Plus
+- [x] Windows 10 version 1809 (Build 17763) or later
+- [x] Windows 11 recommended for best experience
+- [x] .NET 10.0 Runtime *(self-contained, no separate install needed)*
+- [x] Steam Client running and logged in
 
-# Create release build
-dotnet publish -c Release -r win-x86 --self-contained false
+### SAM Classic (v7.x)
 
-# Output: upload\SAM.Picker.exe
-```
+- [x] Windows 7 or later
+- [x] .NET 10.0 Runtime
+- [x] Steam Client running
 
 ---
 
-## 🎮 Usage
+## 🔨 Building
 
-1. **Start Steam** and log in
-2. **Run SAM.Picker.exe**
-3. Select a game from the list (double-click or Enter)
-4. In the Achievement Manager:
-   - ✅ Checkbox = Unlock achievement
-   - ❌ Checkbox = Reset achievement
-   - **Lock All** = Reset all achievements at once
-   - **Unlock All** = Unlock all achievements at once
-   - Click **Commit** to save changes
-
-> 💡 **Tip:** Games with protected achievements are marked with a 🔒 icon in the Game Picker. Protected items cannot be modified.
-
-### Keyboard Shortcuts
-
-| Key | Function |
-|-----|----------|
-| `Enter` | Open game |
-| `Escape` | Close window |
-| `Ctrl+F` | Focus search |
+See [BUILDING.md](BUILDING.md) for detailed build instructions.
 
 ---
 
-## 🏗️ Project Structure
+## 📁 Project Structure
 
-```
-SAM-Plus/
-├── SAM.API/                 # Steam API Wrapper
-│   ├── Client.cs            # Main client for Steam communication
-│   ├── NativeWrapper.cs     # P/Invoke for steam_api.dll
-│   ├── ThemeManager.cs      # Dark Theme color definitions
-│   ├── StoreTitleBar.cs     # Custom Borderless Title Bar
-│   ├── StoreScrollBar.cs    # Custom Dark Scrollbar
-│   ├── ProtectionCache.cs   # Cache for protected games detection
-│   └── Wrappers/            # Interface wrappers for Steam APIs
-│
-├── SAM.Game/                # Achievement Manager
-│   ├── Manager.cs           # Main window with Owner-Draw
-│   └── Stats/               # Achievement & Statistics classes
-│
-├── SAM.Picker/              # Game Picker
-│   ├── GamePicker.cs        # Game selection with Smooth Scrolling
-│   └── GameInfo.cs          # Game data model
-│
-└── upload/                  # Build output
-```
+| Project           | Description                           | Type             | Status          |
+|-------------------|---------------------------------------|------------------|-----------------|
+| **SAM.WinUI**     | Game Picker Application               | WinUI 3 App      | ✅ Active       |
+| **SAM.Manager**   | Achievement Manager (per-game)        | WinUI 3 App      | ✅ Active       |
+| **SAM.Core**      | Shared ViewModels & Services          | Class Library    | ✅ Active       |
+| **SAM.UI.Shared** | Shared UI Components & Styles         | WinUI 3 Library  | ✅ Active       |
+| **SAM.API**       | Steam API Wrapper (32-bit)            | Class Library    | ✅ Active       |
+| ~~SAM.Picker~~    | Legacy Game Picker (WinForms)         | WinForms App     | ⚠️ Deprecated   |
+| ~~SAM.Game~~      | Legacy Achievement Manager (WinForms) | WinForms App     | ⚠️ Deprecated   |
+
+> [!WARNING]
+> `SAM.Picker` and `SAM.Game` are deprecated and will be removed in a future release. Please migrate to **SAM.WinUI** + **SAM.Manager**.
 
 ---
 
-## 🛠️ Technical Details
+## 📜 History
 
-### UI Architecture
-- **WinForms** with Custom Owner-Draw for all controls
-- **Borderless Window** with manual resize handling
-- **Win32 P/Invoke** for scrollbar management
-- **Double Buffering** to prevent flicker
+This is the code for SAM. The closed-source version was originally released in 2008, with the last major release in 2011, and last updated in 2013 (a hotfix).
 
-### Steam Integration
-- Native `steam_api.dll` via P/Invoke
-- Callbacks for achievement updates
-- Icon download via Steam CDN
+The code was made open-source so that those interested can do as they like with it.
 
-### Protection Detection
-- Reads Steam's local schema files (`UserGameStatsSchema_{GameId}.bin`)
-- Checks `permission` flag on achievements and stats (`permission & 2` = protected)
-- Caches results in `%LocalAppData%/SAM-Plus/Cache/protection_cache.json`
-- Visual indicators in Game Picker and Manager for protected items
+### Version History
 
-### Changes Compared to Original SAM
-| Area | Original | SAM-Plus |
-|------|----------|----------|
-| Framework | .NET Framework 4.8 | .NET 8.0 |
-| HTTP | WebClient | HttpClient (async) |
-| UI | Standard WinForms | Custom Dark Theme |
-| Icons | Sync Download | Async Parallel |
-| Window | Standard Border | Borderless Custom |
-| Protection | None | Schema-based Detection |
-
----
-
-## 📝 Known Limitations
-
-- **VAC-protected games:** Changes may result in VAC bans
-- **Server-side achievements:** Some achievements are validated server-side and cannot be unlocked client-side
-- **Online statistics:** Changes may be reset when connecting to game servers
-- **Protected achievements:** Some games have achievements protected by Steam's permission system – SAM-Plus detects and blocks these automatically
-- **Protection cache:** Protected game indicators in the Game Picker only appear after opening the game at least once in the Manager
-
-> ⚠️ **Disclaimer:** Use at your own risk. The developers assume no responsibility for account bans or other consequences.
-
----
-
-## 📜 License
-
-This project is licensed under the **zlib License** – see [LICENSE.txt](LICENSE.txt) for details.
-
-SAM-Plus is a modified and enhanced fork of the original Steam Achievement Manager.
-
-### Attributions
-
-- **Original SAM** by [gibbed](https://github.com/gibbed)
-- **Icons:** [Fugue Icons](https://p.yusukekamiyamane.com/) by Yusuke Kamiyamane
-- **UI Design** inspired by Steam Store
-
----
-
-## 🤝 Contributing
-
-Pull requests are welcome! For major changes, please open an issue first.
-
-1. Create a fork
-2. Create a feature branch (`git checkout -b feature/MyFeature`)
-3. Commit your changes (`git commit -m 'Added feature'`)
-4. Push the branch (`git push origin feature/MyFeature`)
-5. Open a Pull Request
+| Version   | Year | Changes |
+|-----------|------|---------|
+| **v8.0**  | 2026 | Complete UI rewrite with WinUI 3, two-app architecture, MVVM pattern |
+| **v7.0**  | 2019 | Open-source release, code modernization |
+| **v6.x**  | 2013 | Last closed-source hotfix |
+| **v5.x**  | 2011 | Last major closed-source release |
+| **v1.0**  | 2008 | Initial release |

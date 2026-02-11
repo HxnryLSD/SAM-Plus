@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="SAM.WinUI.Views.AboutPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SAM.WinUI.Views">
+
+    <ScrollViewer>
+    <StackPanel Padding="0,0,0,24" MaxWidth="800" HorizontalAlignment="Left">
+        <TextBlock x:Name="PageTitleText" Text="About" 
+                   Style="{StaticResource TitleLargeTextBlockStyle}"
+                   Margin="0,0,0,24"/>
+
+            <!-- App Info Card -->
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="24"
+                    Margin="0,0,0,16">
+                <StackPanel>
+                    <StackPanel Orientation="Horizontal" Spacing="16">
+                        <FontIcon Glyph="&#xE7FC;" FontSize="48"/>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Steam Achievement Manager" 
+                                       Style="{StaticResource TitleTextBlockStyle}"/>
+                            <TextBlock x:Name="VersionText" Text="Version 8.0.0"
+                                       Style="{StaticResource BodyTextBlockStyle}"
+                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                        </StackPanel>
+                    </StackPanel>
+                    
+                    <TextBlock x:Name="DescriptionText" Margin="0,16,0,0"
+                               Style="{StaticResource BodyTextBlockStyle}"
+                               TextWrapping="Wrap"
+                               Text="With Steam Achievement Manager you can manage, unlock and lock achievements for Steam games. This tool is intended for personal use only."/>
+                </StackPanel>
+            </Border>
+
+            <!-- Credits -->
+            <TextBlock x:Name="DevelopedBySectionText" Text="Developed by" 
+                       Style="{StaticResource BodyStrongTextBlockStyle}"
+                       Margin="0,8,0,8"/>
+            
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16"
+                    Margin="0,0,0,8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <StackPanel>
+                        <TextBlock Text="Rick (Gibbed)" 
+                                   Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                        <TextBlock x:Name="OriginalDeveloperText" Text="Original Developer"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
+                    
+                    <HyperlinkButton Grid.Column="1" 
+                                     Content="GitHub" 
+                                     NavigateUri="https://github.com/gibbed"/>
+                </Grid>
+            </Border>
+            
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16"
+                    Margin="0,0,0,16">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    
+                    <StackPanel>
+                        <TextBlock Text="HxnryLSD (Spy)" 
+                                   Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                        <TextBlock x:Name="WinUI3ContributorText" Text="WinUI 3 Modernization &amp; Localization"
+                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                    </StackPanel>
+                    
+                    <HyperlinkButton Grid.Column="1" 
+                                     Content="GitHub" 
+                                     NavigateUri="https://github.com/HxnryLSD"/>
+                </Grid>
+            </Border>
+
+            <!-- Links -->
+            <TextBlock x:Name="LinksSectionText" Text="Links" 
+                       Style="{StaticResource BodyStrongTextBlockStyle}"
+                       Margin="0,8,0,8"/>
+            
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16">
+                <StackPanel Spacing="12">
+                    <HyperlinkButton Content="GitHub Repository" 
+                                     NavigateUri="https://github.com/gibbed/SteamAchievementManager">
+                        <HyperlinkButton.ContentTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xE8A7;" FontSize="16"/>
+                                    <TextBlock Text="{Binding}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </HyperlinkButton.ContentTemplate>
+                    </HyperlinkButton>
+                    
+                    <HyperlinkButton x:Name="ReportBugLink" Content="Report Bug" 
+                                     NavigateUri="https://github.com/gibbed/SteamAchievementManager/issues">
+                        <HyperlinkButton.ContentTemplate>
+                            <DataTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <FontIcon Glyph="&#xEBE8;" FontSize="16"/>
+                                    <TextBlock Text="{Binding}"/>
+                                </StackPanel>
+                            </DataTemplate>
+                        </HyperlinkButton.ContentTemplate>
+                    </HyperlinkButton>
+                </StackPanel>
+            </Border>
+
+            <!-- License -->
+            <TextBlock x:Name="LicenseSectionText" Text="License" 
+                       Style="{StaticResource BodyStrongTextBlockStyle}"
+                       Margin="0,24,0,8"/>
+            
+            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16">
+                <TextBlock Style="{StaticResource CaptionTextBlockStyle}"
+                           TextWrapping="Wrap"
+                           FontFamily="Consolas">
+This software is provided 'as-is', without any express or implied
+warranty. In no event will the authors be held liable for any damages
+arising from the use of this software.
+
+Permission is granted to anyone to use this software for any purpose,
+including commercial applications, and to alter it and redistribute it
+freely, subject to the following restrictions:
+
+1. The origin of this software must not be misrepresented; you must not
+   claim that you wrote the original software.
+2. Altered source versions must be plainly marked as such, and must not
+   be misrepresented as being the original software.
+3. This notice may not be removed or altered from any source distribution.
+                </TextBlock>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

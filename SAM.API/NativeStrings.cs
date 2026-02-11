@@ -71,7 +71,7 @@ namespace SAM.API
             return new StringHandle(p, true);
         }
 
-        public static unsafe string PointerToString(sbyte* bytes)
+        public static unsafe string? PointerToString(sbyte* bytes)
         {
             if (bytes == null)
             {
@@ -94,17 +94,17 @@ namespace SAM.API
             return new string(bytes, 0, running, Encoding.UTF8);
         }
 
-        public static unsafe string PointerToString(byte* bytes)
+        public static unsafe string? PointerToString(byte* bytes)
         {
             return PointerToString((sbyte*)bytes);
         }
 
-        public static unsafe string PointerToString(IntPtr nativeData)
+        public static unsafe string? PointerToString(IntPtr nativeData)
         {
             return PointerToString((sbyte*)nativeData.ToPointer());
         }
 
-        public static unsafe string PointerToString(sbyte* bytes, int length)
+        public static unsafe string? PointerToString(sbyte* bytes, int length)
         {
             if (bytes == null)
             {
@@ -128,12 +128,12 @@ namespace SAM.API
             return new string(bytes, 0, running, Encoding.UTF8);
         }
 
-        public static unsafe string PointerToString(byte* bytes, int length)
+        public static unsafe string? PointerToString(byte* bytes, int length)
         {
             return PointerToString((sbyte*)bytes, length);
         }
 
-        public static unsafe string PointerToString(IntPtr nativeData, int length)
+        public static unsafe string? PointerToString(IntPtr nativeData, int length)
         {
             return PointerToString((sbyte*)nativeData.ToPointer(), length);
         }

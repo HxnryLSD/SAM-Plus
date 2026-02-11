@@ -29,12 +29,12 @@ namespace SAM.API
 {
     public class Client : IDisposable
     {
-        public Wrappers.SteamClient018 SteamClient;
-        public Wrappers.SteamUser012 SteamUser;
-        public Wrappers.SteamUserStats013 SteamUserStats;
-        public Wrappers.SteamUtils005 SteamUtils;
-        public Wrappers.SteamApps001 SteamApps001;
-        public Wrappers.SteamApps008 SteamApps008;
+        public Wrappers.SteamClient018? SteamClient;
+        public Wrappers.SteamUser012? SteamUser;
+        public Wrappers.SteamUserStats013? SteamUserStats;
+        public Wrappers.SteamUtils005? SteamUtils;
+        public Wrappers.SteamApps001? SteamApps001;
+        public Wrappers.SteamApps008? SteamApps008;
 
         private bool _IsDisposed = false;
         private int _Pipe;

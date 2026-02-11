@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="SAM.Manager.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SAM.Manager"
+    xmlns:views="using:SAM.Manager.Views"
+    Title="Steam Achievement Manager">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Custom Title Bar -->
+        <Grid x:Name="AppTitleBar" 
+              Height="48" 
+              Background="Transparent">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            
+            <!-- Back Button -->
+            <Button x:Name="BackButton"
+                    Style="{StaticResource NavigationBackButtonNormalStyle}"
+                    Visibility="Collapsed"
+                    Click="BackButton_Click"
+                    VerticalAlignment="Center"
+                    Margin="4,0,0,0"/>
+            
+            <FontIcon Grid.Column="1"
+                      Glyph="&#xE7FC;" 
+                      FontSize="16"
+                      Margin="8,0,8,0"
+                      VerticalAlignment="Center"/>
+            
+            <TextBlock Grid.Column="2"
+                       x:Name="AppTitleTextBlock"
+                       Style="{StaticResource CaptionTextBlockStyle}"
+                       VerticalAlignment="Center"/>
+        </Grid>
+
+        <!-- Main Content Frame -->
+        <Frame x:Name="ContentFrame" 
+               Grid.Row="1"
+               Padding="24"/>
+    </Grid>
+</Window>

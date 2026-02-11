@@ -43,7 +43,7 @@ namespace SAM.API.Wrappers
         [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
         private delegate IntPtr NativeGetCurrentGameLanguage(IntPtr self);
 
-        public string GetCurrentGameLanguage()
+        public string? GetCurrentGameLanguage()
         {
             var languagePointer = this.Call<IntPtr, NativeGetCurrentGameLanguage>(
                 this.Functions.GetCurrentGameLanguage,

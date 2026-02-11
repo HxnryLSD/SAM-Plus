@@ -42,7 +42,7 @@ namespace SAM.API.Wrappers
         [UnmanagedFunctionPointer(CallingConvention.ThisCall)]
         private delegate IntPtr NativeGetIPCountry(IntPtr self);
 
-        public string GetIPCountry()
+        public string? GetIPCountry()
         {
             var result = this.Call<IntPtr, NativeGetIPCountry>(this.Functions.GetIPCountry, this.ObjectAddress);
             return NativeStrings.PointerToString(result);

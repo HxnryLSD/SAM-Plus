@@ -37,7 +37,7 @@ namespace SAM.API.Wrappers
             IntPtr value,
             int valueLength);
 
-        public string GetAppData(uint appId, string key)
+        public string? GetAppData(uint appId, string key)
         {
             using (var nativeHandle = NativeStrings.StringToStringHandle(key))
             {

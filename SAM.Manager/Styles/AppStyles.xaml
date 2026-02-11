@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SAM.Manager">
+
+    <!-- Custom Text Styles -->
+    <Style x:Key="PageHeaderTextStyle" TargetType="TextBlock" BasedOn="{StaticResource TitleLargeTextBlockStyle}">
+        <Setter Property="Margin" Value="0,0,0,24"/>
+    </Style>
+    
+    <Style x:Key="SectionHeaderTextStyle" TargetType="TextBlock" BasedOn="{StaticResource BodyStrongTextBlockStyle}">
+        <Setter Property="Margin" Value="0,16,0,8"/>
+    </Style>
+
+    <!-- Card Style -->
+    <Style x:Key="CardStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="16"/>
+    </Style>
+    
+    <!-- Achievement Item Style with Animation Support -->
+    <Style x:Key="AchievementItemStyle" TargetType="Grid">
+        <Setter Property="Padding" Value="8"/>
+        <Setter Property="Margin" Value="0,4"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
+    </Style>
+    
+    <!-- Animated Achievement Card Style -->
+    <Style x:Key="AnimatedAchievementCardStyle" TargetType="Border">
+        <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}"/>
+        <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="CornerRadius" Value="8"/>
+        <Setter Property="Padding" Value="8"/>
+        <Setter Property="Margin" Value="0,4"/>
+        <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
+    </Style>
+    
+    <!-- Icon Button Style -->
+    <Style x:Key="IconButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="8"/>
+        <Setter Property="Width" Value="40"/>
+        <Setter Property="Height" Value="40"/>
+    </Style>
+    
+    <!-- Alternate Close Button Style (for notifications) -->
+    <Style x:Key="AlternateCloseButtonStyle" TargetType="Button">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="4"/>
+        <Setter Property="Width" Value="24"/>
+        <Setter Property="Height" Value="24"/>
+        <Setter Property="CornerRadius" Value="4"/>
+    </Style>
+    
+    <!-- Status Colors -->
+    <SolidColorBrush x:Key="UnlockedBrush" Color="#4CAF50"/>
+    <SolidColorBrush x:Key="LockedBrush" Color="#9E9E9E"/>
+    <SolidColorBrush x:Key="ModifiedBrush" Color="#FF9800"/>
+    <SolidColorBrush x:Key="ProtectedBrush" Color="#F44336"/>
+    
+    <!-- Animation Colors -->
+    <SolidColorBrush x:Key="UnlockFlashBrush" Color="#304CAF50"/>
+    <SolidColorBrush x:Key="LockFlashBrush" Color="#30F44336"/>
+
+</ResourceDictionary>

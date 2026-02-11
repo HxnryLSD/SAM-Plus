@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="SAM.Manager.Controls.ConfettiControl"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SAM.Manager.Controls"
+    IsHitTestVisible="False">
+
+    <Canvas x:Name="ConfettiCanvas">
+        <!-- Confetti particles are generated in code-behind -->
+    </Canvas>
+</UserControl>

@@ -1,0 +1,15 @@
+<Project>
+  <!-- 
+    Note: Building SAM.WinUI requires Visual Studio 2022 with:
+    - .NET Desktop Development workload
+    - Windows App SDK C# Templates
+    
+    The MrtCore PRI generation tasks are part of the AppxPackage build tools
+    which are only available with Visual Studio installation.
+    
+    To build from command line, use:
+    msbuild SAM.WinUI.csproj -p:Platform=x86 -p:Configuration=Debug
+    
+    Or use Visual Studio IDE directly.
+  -->
+</Project>

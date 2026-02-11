@@ -1,0 +1,18 @@
+<Project>
+  <!-- Separate output directories for each WinUI app to avoid XBF/PRI conflicts -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'SAM.WinUI' Or '$(MSBuildProjectName)' == 'SAM.Manager'">
+    <OutputPath>$(MSBuildThisFileDirectory)bin\$(Platform)\$(Configuration)\$(MSBuildProjectName)\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+  </PropertyGroup>
+  
+  <!-- Shared package versions to avoid DLL conflicts -->
+  <PropertyGroup>
+    <WindowsAppSDKVersion>1.6.250108002</WindowsAppSDKVersion>
+    <WindowsSDKBuildToolsVersion>10.0.26100.1742</WindowsSDKBuildToolsVersion>
+    <CsWinRTVersion>2.2.0</CsWinRTVersion>
+    <CommunityToolkitMvvmVersion>8.4.0</CommunityToolkitMvvmVersion>
+    <DependencyInjectionVersion>10.0.2</DependencyInjectionVersion>
+    <SqliteVersion>9.0.1</SqliteVersion>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="SAM.WinUI.Controls.AchievementCard"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:SAM.WinUI.Controls">
+
+    <Grid Padding="12"
+          Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+          BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+          BorderThickness="1"
+          CornerRadius="8"
+          ColumnSpacing="16">
+        
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="64"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Checkbox -->
+        <CheckBox x:Name="UnlockCheckBox"
+                  IsChecked="{x:Bind IsUnlocked, Mode=TwoWay}"
+                  VerticalAlignment="Center"
+                  Checked="UnlockCheckBox_Changed"
+                  Unchecked="UnlockCheckBox_Changed"/>
+
+        <!-- Achievement Icon -->
+        <Grid Grid.Column="1" 
+              Width="64" 
+              Height="64"
+              CornerRadius="4">
+            <Image x:Name="AchievementIcon"
+                   Source="{x:Bind IconUrl, Mode=OneWay}" 
+                   Stretch="UniformToFill"/>
+            <!-- Locked Overlay -->
+            <Border x:Name="LockedOverlay"
+                    Background="{ThemeResource ControlFillColorDisabledBrush}"
+                    Opacity="0.6"
+                    CornerRadius="4"
+                    Visibility="{x:Bind IsUnlocked, Mode=OneWay, Converter={StaticResource InverseBoolToVisibilityConverter}}"/>
+        </Grid>
+
+        <!-- Achievement Info -->
+        <StackPanel Grid.Column="2" 
+                    VerticalAlignment="Center"
+                    Spacing="4">
+            <TextBlock x:Name="NameText"
+                       Text="{x:Bind Name, Mode=OneWay}" 
+                       Style="{StaticResource BodyStrongTextBlockStyle}"
+                       TextTrimming="CharacterEllipsis"
+                       MaxLines="1"/>
+            <TextBlock x:Name="DescriptionText"
+                       Text="{x:Bind Description, Mode=OneWay}" 
+                       Style="{StaticResource CaptionTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       TextWrapping="Wrap"
+                       MaxLines="2"/>
+            
+            <!-- Modified Indicator -->
+            <Border x:Name="ModifiedBadge"
+                    Background="{ThemeResource SystemFillColorCautionBackgroundBrush}"
+                    CornerRadius="4"
+                    Padding="8,2"
+                    HorizontalAlignment="Left"
+                    Visibility="{x:Bind IsModified, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                <TextBlock Text="Geändert" 
+                           Style="{StaticResource CaptionTextBlockStyle}"
+                           Foreground="{ThemeResource SystemFillColorCautionBrush}"/>
+            </Border>
+        </StackPanel>
+
+        <!-- Unlock Date / Status -->
+        <StackPanel Grid.Column="3" 
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Right"
+                    Spacing="4">
+            <TextBlock x:Name="UnlockDateText"
+                       Text="{x:Bind UnlockDate, Mode=OneWay}" 
+                       Style="{StaticResource CaptionTextBlockStyle}"
+                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                       HorizontalAlignment="Right"/>
+            <FontIcon x:Name="StatusIcon"
+                      Glyph="{x:Bind IsUnlocked, Mode=OneWay, Converter={StaticResource BoolToGlyphConverter}}"
+                      FontSize="16"
+                      Foreground="{x:Bind IsUnlocked, Mode=OneWay, Converter={StaticResource BoolToColorConverter}}"
+                      HorizontalAlignment="Right"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

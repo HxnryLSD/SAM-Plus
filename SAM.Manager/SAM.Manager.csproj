@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <RootNamespace>SAM.Manager</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <Platforms>x86;x64;arm64</Platforms>
+    <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
+    <PublishProfile>win-$(Platform).pubxml</PublishProfile>
+    <UseWinUI>true</UseWinUI>
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <WindowsSdkPackageVersion>10.0.19041.47</WindowsSdkPackageVersion>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <AssemblyTitle>Steam Achievement Manager - Game Manager</AssemblyTitle>
+    <Description>Achievement manager for a single Steam game</Description>
+  </PropertyGroup>
+
+  <!-- Force XAML optimization for all configurations to prevent PRI/XBF mismatch in shared output directory -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <DisableXbfLineInfo>true</DisableXbfLineInfo>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="Assets\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <None Remove="Views\AchievementManagerPage.xaml" />
+    <None Remove="Views\StatisticsPage.xaml" />
+    <None Remove="Styles\AppStyles.xaml" />
+    <None Remove="Controls\ConfettiControl.xaml" />
+    <None Remove="Controls\NotificationBar.xaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="$(WindowsSDKBuildToolsVersion)" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="$(WindowsAppSDKVersion)" />
+    <PackageReference Include="Microsoft.Windows.CsWinRT" Version="$(CsWinRTVersion)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SAM.API\SAM.API.csproj" />
+    <ProjectReference Include="..\SAM.Core\SAM.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Page Update="Views\AchievementManagerPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Update="Views\StatisticsPage.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Update="Styles\AppStyles.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Update="Controls\ConfettiControl.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Update="Controls\NotificationBar.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+
+  <!-- Rename resources.pri to SAM.Manager.pri (WinUI unpackaged naming convention) -->
+  <Target Name="RenameResourcesPri" AfterTargets="Build">
+    <Move SourceFiles="$(OutputPath)resources.pri" DestinationFiles="$(OutputPath)$(MSBuildProjectName).pri" 
+          Condition="Exists('$(OutputPath)resources.pri') AND !Exists('$(OutputPath)$(MSBuildProjectName).pri')" />
+    <!-- If both exist, delete the duplicate resources.pri -->
+    <Delete Files="$(OutputPath)resources.pri" 
+            Condition="Exists('$(OutputPath)resources.pri') AND Exists('$(OutputPath)$(MSBuildProjectName).pri')" />
+  </Target>
+
+  <!-- Copy XBF (compiled XAML) files to output directory for shared output builds -->
+  <Target Name="CopyXbfFilesToOutput" AfterTargets="Build">
+    <ItemGroup>
+      <XbfFiles Include="$(IntermediateOutputPath)**\*.xbf" />
+    </ItemGroup>
+    <Copy SourceFiles="@(XbfFiles)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

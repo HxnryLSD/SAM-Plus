@@ -29,7 +29,7 @@ namespace SAM.API
     public abstract class NativeWrapper<TNativeFunctions> : INativeWrapper
     {
         protected IntPtr ObjectAddress;
-        protected TNativeFunctions Functions;
+        protected TNativeFunctions Functions = default!;
 
         public override string ToString()
         {
@@ -42,11 +42,11 @@ namespace SAM.API
 
             var iface = (NativeClass)Marshal.PtrToStructure(
                 this.ObjectAddress,
-                typeof(NativeClass));
+                typeof(NativeClass))!;
 
             this.Functions = (TNativeFunctions)Marshal.PtrToStructure(
                 iface.VirtualTable,
-                typeof(TNativeFunctions));
+                typeof(TNativeFunctions))!;
         }
 
         private readonly Dictionary<IntPtr, Delegate> _FunctionCache = new();
@@ -64,7 +64,7 @@ namespace SAM.API
         protected TDelegate GetFunction<TDelegate>(IntPtr pointer)
             where TDelegate : class
         {
-            return (TDelegate)((object)this.GetDelegate<TDelegate>(pointer));
+            return (TDelegate)((object)this.GetDelegate<TDelegate>(pointer))!;
         }
 
         protected void Call<TDelegate>(IntPtr pointer, params object[] args)
@@ -74,7 +74,7 @@ namespace SAM.API
 
         protected TReturn Call<TReturn, TDelegate>(IntPtr pointer, params object[] args)
         {
-            return (TReturn)this.GetDelegate<TDelegate>(pointer).DynamicInvoke(args);
+            return (TReturn)this.GetDelegate<TDelegate>(pointer).DynamicInvoke(args)!;
         }
     }
 }
