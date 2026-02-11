@@ -20,8 +20,11 @@
  *    distribution.
  */
 
+using System;
+using System.Threading.Tasks;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Microsoft.UI.Xaml.Navigation;
 using SAM.Core.Models;
@@ -38,8 +41,10 @@ namespace SAM.Manager.Views;
 public sealed partial class AchievementManagerPage : Page
 {
     public AchievementManagerViewModel ViewModel { get; } = null!;
-    private double _previousCompletionPercentage;
-    private bool _hasShownConfettiThisSession;
+    private Grid? _loadingOverlay;
+    private InfoBar? _errorInfoBar;
+    private NotificationBar? _notificationBar;
+    private ListView? _achievementsListView;
 
     public AchievementManagerPage()
     {
@@ -47,49 +52,121 @@ public sealed partial class AchievementManagerPage : Page
         ViewModel = App.GetService<AchievementManagerViewModel>();
         ArgumentNullException.ThrowIfNull(ViewModel, nameof(ViewModel));
         Log.Debug($"ViewModel obtained: {ViewModel is not null}");
+        DataContext = ViewModel;
         InitializeComponent();
-        
-        // Wire up CommandBar buttons (avoiding WinUI 3 x:Bind bug with AppBarButton)
-        SetupCommandBarBindings();
-        
+        Loaded += AchievementManagerPage_Loaded;
+
         // Subscribe to ViewModel property changes for animations
         ViewModel!.PropertyChanged += ViewModel_PropertyChanged;
-        
+
         Log.MethodExit("success");
     }
 
-    private void SetupCommandBarBindings()
+    private void AchievementManagerPage_Loaded(object sender, RoutedEventArgs e)
     {
-        // Wire up commands
-        RefreshButton.Command = ViewModel.RefreshCommand;
-        SaveButton.Command = ViewModel.StoreStatsCommand;
-        UnlockAllButton.Command = ViewModel.UnlockAllCommand;
-        LockAllButton.Command = ViewModel.LockAllCommand;
-        InvertAllButton.Command = ViewModel.InvertAllCommand;
-        StatisticsButton.Click += StatisticsButton_Click;
-        ResetAllButton.Command = ViewModel.ResetAllCommand;
-        
-        // Wire up IsEnabled bindings
-        void UpdateButtonStates(object? s, System.ComponentModel.PropertyChangedEventArgs e)
+        Log.Debug("AchievementManagerPage_Loaded: Finding controls by type...");
+
+        if (Content is not Grid pageGrid)
         {
-            if (e.PropertyName == nameof(ViewModel.CanModifyAchievements))
+            Log.Error("Page Content is not a Grid!");
+            return;
+        }
+
+        Log.Debug($"  Root Grid has {pageGrid.Children.Count} children");
+
+        // Dump all children types for diagnostics
+        for (var i = 0; i < pageGrid.Children.Count; i++)
+        {
+            var c = pageGrid.Children[i];
+            var tag = (c is FrameworkElement fe) ? fe.Tag : null;
+            Log.Debug($"  Child[{i}]: Type={c.GetType().Name}, Tag={tag ?? "(null)"}, Row={Grid.GetRow(c as FrameworkElement ?? new Grid())}");
+        }
+
+        // Find controls by type - each type is unique on this page.
+        // Tag-based lookup fails in WinUI3 due to WinRT interop issues with Panel.Children.
+        _achievementsListView = FindFirst<ListView>(pageGrid);
+        var searchBox = FindFirst<AutoSuggestBox>(pageGrid);
+        var filterComboBox = FindFirst<ComboBox>(pageGrid);
+        var commandBar = FindFirst<CommandBar>(pageGrid);
+
+        // Multiple Grids exist - find LoadingOverlay by Grid.RowSpan=6 (it spans all rows)
+        // and ErrorInfoBar is the only InfoBar without IsClosable="False" (the DRM one has IsClosable=False)
+        foreach (var child in pageGrid.Children)
+        {
+            if (child is Grid g && Grid.GetRowSpan(g) == 6)
             {
-                var canModify = ViewModel.CanModifyAchievements;
-                SaveButton.IsEnabled = canModify;
-                UnlockAllButton.IsEnabled = canModify;
-                LockAllButton.IsEnabled = canModify;
-                InvertAllButton.IsEnabled = canModify;
+                _loadingOverlay = g;
+            }
+            // ErrorInfoBar: severity=Error (the DRM one is severity=Warning)
+            if (child is InfoBar ib && ib.Severity == InfoBarSeverity.Error)
+            {
+                _errorInfoBar = ib;
             }
         }
-        
-        ViewModel.PropertyChanged += UpdateButtonStates;
-        
-        // Set initial state
-        var initialCanModify = ViewModel.CanModifyAchievements;
-        SaveButton.IsEnabled = initialCanModify;
-        UnlockAllButton.IsEnabled = initialCanModify;
-        LockAllButton.IsEnabled = initialCanModify;
-        InvertAllButton.IsEnabled = initialCanModify;
+
+        Log.Debug($"  ListView: {_achievementsListView is not null}");
+        Log.Debug($"  SearchBox: {searchBox is not null}");
+        Log.Debug($"  FilterComboBox: {filterComboBox is not null}");
+        Log.Debug($"  CommandBar: {commandBar is not null}");
+        Log.Debug($"  LoadingOverlay: {_loadingOverlay is not null}");
+        Log.Debug($"  ErrorInfoBar: {_errorInfoBar is not null}");
+
+        // Create NotificationBar in code to avoid WinRT Connect cast issues
+        _notificationBar = new NotificationBar
+        {
+            VerticalAlignment = VerticalAlignment.Top,
+            Margin = new Thickness(0, 8, 0, 0)
+        };
+        Grid.SetRow(_notificationBar, 4);
+        pageGrid.Children.Add(_notificationBar);
+
+        // Hook up event handlers
+        if (_achievementsListView is not null)
+        {
+            _achievementsListView.ContainerContentChanging += AchievementsListView_ContainerContentChanging;
+            _achievementsListView.ItemsSource = ViewModel.FilteredAchievements;
+            Log.Debug($"  ListView ItemsSource set: {ViewModel.FilteredAchievements?.Count ?? 0} items");
+        }
+
+        if (searchBox is not null)
+        {
+            searchBox.TextChanged += SearchBox_TextChanged;
+        }
+
+        if (filterComboBox is not null)
+        {
+            filterComboBox.SelectionChanged += FilterComboBox_SelectionChanged;
+        }
+
+        // Find StatisticsButton inside CommandBar.PrimaryCommands
+        if (commandBar is not null)
+        {
+            foreach (var cmd in commandBar.PrimaryCommands)
+            {
+                if (cmd is AppBarButton btn && string.Equals(btn.Tag as string, "StatisticsButton", StringComparison.Ordinal))
+                {
+                    btn.Click += StatisticsButton_Click;
+                    Log.Debug("  StatisticsButton Click handler attached");
+                    break;
+                }
+            }
+
+            // If Tag lookup didn't work, find by label
+            // The Statistics button has Label="Statistiken"
+            foreach (var cmd in commandBar.PrimaryCommands)
+            {
+                if (cmd is AppBarButton btn && btn.Label == "Statistiken")
+                {
+                    // Only attach if not already attached (from Tag lookup above)
+                    btn.Click -= StatisticsButton_Click;
+                    btn.Click += StatisticsButton_Click;
+                    Log.Debug("  StatisticsButton found by Label and Click handler attached");
+                    break;
+                }
+            }
+        }
+
+        Log.Debug("AchievementManagerPage_Loaded: Complete");
     }
 
     private async void ViewModel_PropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
@@ -98,13 +175,17 @@ public sealed partial class AchievementManagerPage : Page
         {
             switch (e.PropertyName)
             {
-                case nameof(ViewModel.CompletionPercentage):
-                    await HandleCompletionPercentageChangedAsync();
+                case nameof(ViewModel.FilteredAchievements):
+                    // Update ListView ItemsSource when the collection is replaced
+                    if (_achievementsListView is not null)
+                    {
+                        _achievementsListView.ItemsSource = ViewModel.FilteredAchievements;
+                    }
                     break;
                 case nameof(ViewModel.HasUnsavedChanges):
                     if (ViewModel.HasUnsavedChanges && !ViewModel.IsBusy)
                     {
-                        // Show subtle notification for unsaved changes
+                        // Intentionally no-op. Hook for future UI hint.
                     }
                     break;
             }
@@ -115,19 +196,6 @@ public sealed partial class AchievementManagerPage : Page
         }
     }
 
-    private async Task HandleCompletionPercentageChangedAsync()
-    {
-        var currentPercentage = ViewModel.CompletionPercentage;
-        
-        // Check if reached 100% from below 100%
-        if (currentPercentage >= 100 && _previousCompletionPercentage < 100 && !_hasShownConfettiThisSession)
-        {
-            _hasShownConfettiThisSession = true;
-            await ConfettiOverlay.PlayCelebrationAsync();
-        }
-        
-        _previousCompletionPercentage = currentPercentage;
-    }
 
     protected override async void OnNavigatedTo(NavigationEventArgs e)
     {
@@ -138,12 +206,12 @@ public sealed partial class AchievementManagerPage : Page
             Log.Debug($"e.Parameter: {e.Parameter}");
             Log.Debug($"e.Parameter type: {e.Parameter?.GetType().FullName}");
             Log.Debug($"App.GameId: {App.GameId}");
-            
+
             base.OnNavigatedTo(e);
 
             // In SAM.Manager, the game ID comes from the App, not navigation parameter
             uint gameId = App.GameId;
-            
+
             // Support navigation parameter override for consistency
             if (e.Parameter is uint paramGameId && paramGameId > 0)
             {
@@ -164,7 +232,7 @@ public sealed partial class AchievementManagerPage : Page
             {
                 Log.Info($"Using App.GameId: {gameId}");
             }
-            
+
             if (gameId > 0)
             {
                 await LoadGameAsync(gameId);
@@ -172,17 +240,23 @@ public sealed partial class AchievementManagerPage : Page
             else
             {
                 Log.Error("No valid GameId available!");
-                ErrorInfoBar.Message = "Keine gültige Spiel-ID. SAM.Manager muss mit einer Spiel-ID gestartet werden.";
-                ErrorInfoBar.IsOpen = true;
+                if (_errorInfoBar is not null)
+                {
+                    _errorInfoBar.Message = "Keine gueltige Spiel-ID. SAM.Manager muss mit einer Spiel-ID gestartet werden.";
+                    _errorInfoBar.IsOpen = true;
+                }
             }
-            
+
             Log.Info("========== END AchievementManagerPage.OnNavigatedTo ==========");
         }
         catch (Exception ex)
         {
             Log.Exception(ex, "OnNavigatedTo failed");
-            ErrorInfoBar.Message = $"Fehler beim Laden: {ex.Message}";
-            ErrorInfoBar.IsOpen = true;
+            if (_errorInfoBar is not null)
+            {
+                _errorInfoBar.Message = $"Fehler beim Laden: {ex.Message}";
+                _errorInfoBar.IsOpen = true;
+            }
         }
     }
 
@@ -196,11 +270,11 @@ public sealed partial class AchievementManagerPage : Page
             if (ViewModel.HasUnsavedChanges)
             {
                 e.Cancel = true;
-                
+
                 var dialog = new ContentDialog
                 {
-                    Title = "Ungespeicherte Änderungen",
-                    Content = "Es gibt ungespeicherte Änderungen. Möchtest du sie speichern?",
+                    Title = "Ungespeicherte Aenderungen",
+                    Content = "Es gibt ungespeicherte Aenderungen. Moechtest du sie speichern?",
                     PrimaryButtonText = "Speichern",
                     SecondaryButtonText = "Verwerfen",
                     CloseButtonText = "Abbrechen",
@@ -209,7 +283,7 @@ public sealed partial class AchievementManagerPage : Page
                 };
 
                 var result = await dialog.ShowAsync();
-                
+
                 switch (result)
                 {
                     case ContentDialogResult.Primary:
@@ -233,12 +307,19 @@ public sealed partial class AchievementManagerPage : Page
     {
         Log.Method();
         Log.Info($"Loading game with ID: {gameId}");
-        
+
         try
         {
             Log.Debug("Setting LoadingOverlay visible...");
-            LoadingOverlay.Visibility = Visibility.Visible;
-            ErrorInfoBar.IsOpen = false;
+            if (_loadingOverlay is not null)
+            {
+                _loadingOverlay.Visibility = Visibility.Visible;
+            }
+
+            if (_errorInfoBar is not null)
+            {
+                _errorInfoBar.IsOpen = false;
+            }
 
             // Set GameName from App before loading (so it will be saved in userdata)
             if (!string.IsNullOrEmpty(App.GameName))
@@ -248,44 +329,51 @@ public sealed partial class AchievementManagerPage : Page
 
             Log.Info("Calling ViewModel.InitializeCommand...");
             await ViewModel.InitializeCommand.ExecuteAsync((long)gameId);
-            
+
             Log.Info($"InitializeCommand completed. Achievements count: {ViewModel.Achievements.Count}");
             Log.Debug($"FilteredAchievements total count: {ViewModel.FilteredTotalCount}");
             Log.Debug($"GameName: {ViewModel.GameName}");
             Log.Debug($"HasError: {ViewModel.HasError}");
             Log.Debug($"ErrorMessage: {ViewModel.ErrorMessage}");
-            
-            // Initialize previous completion percentage for confetti tracking
-            _previousCompletionPercentage = ViewModel.CompletionPercentage;
-            _hasShownConfettiThisSession = ViewModel.CompletionPercentage >= 100;
-            
+
             // Check if ViewModel caught an error
             if (ViewModel.HasError)
             {
-                Log.Error($"ViewModel reported error: {ViewModel.ErrorMessage}");
-                ErrorInfoBar.Message = ViewModel.ErrorMessage ?? "Unbekannter Fehler beim Laden der Achievements";
-                ErrorInfoBar.IsOpen = true;
+                if (_errorInfoBar is not null)
+                {
+                    _errorInfoBar.Message = ViewModel.ErrorMessage ?? "Unbekannter Fehler beim Laden der Achievements";
+                    _errorInfoBar.IsOpen = true;
+                }
             }
             else
             {
                 // Show success notification
-                await NotificationBar.ShowSuccessAsync(
-                    $"{ViewModel.Achievements.Count} Achievements geladen",
-                    $"{ViewModel.UnlockedCount} freigeschaltet ({ViewModel.CompletionPercentage:F0}%)");
+                if (_notificationBar is not null)
+                {
+                    await _notificationBar.ShowSuccessAsync(
+                        $"{ViewModel.Achievements.Count} Achievements geladen",
+                        $"{ViewModel.UnlockedCount} freigeschaltet ({ViewModel.CompletionPercentage:F0}%)");
+                }
             }
         }
         catch (Exception ex)
         {
             Log.Exception(ex, "LoadGameAsync failed");
-            ErrorInfoBar.Message = ex.Message;
-            ErrorInfoBar.IsOpen = true;
+            if (_errorInfoBar is not null)
+            {
+                _errorInfoBar.Message = ex.Message;
+                _errorInfoBar.IsOpen = true;
+            }
         }
         finally
         {
             Log.Debug("Hiding LoadingOverlay...");
-            LoadingOverlay.Visibility = Visibility.Collapsed;
+            if (_loadingOverlay is not null)
+            {
+                _loadingOverlay.Visibility = Visibility.Collapsed;
+            }
         }
-        
+
         Log.MethodExit();
     }
 
@@ -340,6 +428,19 @@ public sealed partial class AchievementManagerPage : Page
         {
             DecodePixelWidth = 64
         };
+
+        // Hook ImageOpened on the BitmapImage to fade in (can't use XAML event due to Connect cast bug)
+        var capturedImage = image;
+        var capturedPlaceholder = placeholder;
+        bitmap.ImageOpened += (s, ev) =>
+        {
+            capturedImage.Opacity = 1;
+            if (capturedPlaceholder is not null)
+            {
+                capturedPlaceholder.Visibility = Visibility.Collapsed;
+            }
+        };
+
         image.Source = bitmap;
     }
 
@@ -371,7 +472,12 @@ public sealed partial class AchievementManagerPage : Page
 
     private void FilterComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        ViewModel.FilterType = FilterComboBox.SelectedIndex switch
+        if (sender is not ComboBox comboBox)
+        {
+            return;
+        }
+
+        ViewModel.FilterType = comboBox.SelectedIndex switch
         {
             1 => AchievementFilterType.Unlocked,
             2 => AchievementFilterType.Locked,
@@ -390,5 +496,30 @@ public sealed partial class AchievementManagerPage : Page
         };
 
         Frame.Navigate(typeof(StatisticsPage), param);
+    }
+
+    /// <summary>
+    /// Finds the first element of the given type in a Panel's Children, recursing into nested Panels.
+    /// </summary>
+    private static T? FindFirst<T>(Panel parent) where T : UIElement
+    {
+        foreach (var child in parent.Children)
+        {
+            if (child is T match)
+            {
+                return match;
+            }
+
+            if (child is Panel childPanel)
+            {
+                var result = FindFirst<T>(childPanel);
+                if (result is not null)
+                {
+                    return result;
+                }
+            }
+        }
+
+        return null;
     }
 }

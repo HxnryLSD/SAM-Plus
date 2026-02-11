@@ -21,7 +21,7 @@
         <!-- Game Header with Cover Image -->
         <Grid Height="140" Margin="-24,-24,-24,0">
             <!-- Background Cover Image -->
-            <Image Source="{x:Bind ViewModel.HeaderImageUrl, Mode=OneWay}"
+                 <Image Source="{x:Bind ViewModel.HeaderImageUrl, Mode=OneWay}"
                    Stretch="UniformToFill"
                    HorizontalAlignment="Center"
                    VerticalAlignment="Center"/>
@@ -38,34 +38,33 @@
             </Rectangle>
             
             <StackPanel VerticalAlignment="Bottom" Padding="24,0,24,16">
-                <TextBlock x:Name="GameNameText"
-                           Text="{x:Bind ViewModel.GameName, Mode=OneWay}" 
+                <TextBlock Text="{x:Bind ViewModel.GameName, Mode=OneWay}" 
                            Style="{StaticResource TitleLargeTextBlockStyle}"
                            Foreground="White"/>
                 <StackPanel Orientation="Horizontal" Spacing="16" Margin="0,8,0,0">
-                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Foreground="White">
-                        <Run Text="{x:Bind ViewModel.UnlockedCount, Mode=OneWay}"/>
-                        <Run Text="/"/>
-                        <Run Text="{x:Bind ViewModel.Achievements.Count, Mode=OneWay}"/>
-                        <Run Text="Achievements"/>
-                    </TextBlock>
+                    <StackPanel Orientation="Horizontal" Spacing="2">
+                        <TextBlock Text="{x:Bind ViewModel.UnlockedCount, Mode=OneWay}" Style="{StaticResource BodyTextBlockStyle}" Foreground="White"/>
+                        <TextBlock Text="/" Style="{StaticResource BodyTextBlockStyle}" Foreground="White"/>
+                        <TextBlock Text="{x:Bind ViewModel.Achievements.Count, Mode=OneWay}" Style="{StaticResource BodyTextBlockStyle}" Foreground="White"/>
+                        <TextBlock Text=" Achievements" Style="{StaticResource BodyTextBlockStyle}" Foreground="White"/>
+                    </StackPanel>
                     <ProgressBar Value="{x:Bind ViewModel.CompletionPercentage, Mode=OneWay}"
                                  Maximum="100"
                                  Width="200"/>
-                    <TextBlock Style="{StaticResource BodyTextBlockStyle}" Foreground="White">
-                        <Run Text="{x:Bind ViewModel.CompletionPercentage, Mode=OneWay}"/>
-                        <Run Text="%"/>
-                    </TextBlock>
+                    <StackPanel Orientation="Horizontal" Spacing="0">
+                        <TextBlock Text="{x:Bind ViewModel.CompletionPercentage, Mode=OneWay}" Style="{StaticResource BodyTextBlockStyle}" Foreground="White"/>
+                        <TextBlock Text="%" Style="{StaticResource BodyTextBlockStyle}" Foreground="White"/>
+                    </StackPanel>
                 </StackPanel>
             </StackPanel>
         </Grid>
 
         <!-- DRM Protection Warning -->
         <InfoBar Grid.Row="1"
-                 IsOpen="{x:Bind ViewModel.HasProtectedAchievements, Mode=OneWay}"
+             IsOpen="{x:Bind ViewModel.HasProtectedAchievements, Mode=OneWay}"
                  Severity="Warning"
                  Title="Geschützte Erfolge"
-                 Message="{x:Bind ViewModel.ProtectedWarningMessage, Mode=OneWay}"
+             Message="{x:Bind ViewModel.ProtectedWarningMessage, Mode=OneWay}"
                  IsClosable="False"
                  Margin="0,8,0,0"/>
 
@@ -74,43 +73,48 @@
                     DefaultLabelPosition="Right"
                     Background="Transparent"
                     Margin="0,8,0,0">
-            <AppBarButton x:Name="RefreshButton"
-                          Icon="Refresh" 
-                          Label="Aktualisieren"/>
-            <AppBarButton x:Name="SaveButton"
-                          Icon="Save" 
-                          Label="Speichern">
+            <AppBarButton Icon="Refresh" 
+                          Label="Aktualisieren"
+                          Command="{x:Bind ViewModel.RefreshCommand}"/>
+            <AppBarButton Icon="Save" 
+                          Label="Speichern"
+                          Command="{x:Bind ViewModel.StoreStatsCommand}"
+                          IsEnabled="{x:Bind ViewModel.CanModifyAchievements, Mode=OneWay}">
                 <AppBarButton.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="Control" Key="S"/>
                 </AppBarButton.KeyboardAccelerators>
             </AppBarButton>
             <AppBarSeparator/>
-            <AppBarButton x:Name="UnlockAllButton"
-                          Icon="SelectAll" 
-                          Label="Alle freischalten"/>
-            <AppBarButton x:Name="LockAllButton"
-                          Label="Alle sperren">
+            <AppBarButton Icon="SelectAll" 
+                          Label="Alle freischalten"
+                          Command="{x:Bind ViewModel.UnlockAllCommand}"
+                          IsEnabled="{x:Bind ViewModel.CanModifyAchievements, Mode=OneWay}"/>
+            <AppBarButton Label="Alle sperren"
+                          Command="{x:Bind ViewModel.LockAllCommand}"
+                          IsEnabled="{x:Bind ViewModel.CanModifyAchievements, Mode=OneWay}">
                 <AppBarButton.Icon>
                     <FontIcon Glyph="&#xE711;"/>
                 </AppBarButton.Icon>
             </AppBarButton>
-            <AppBarButton x:Name="InvertAllButton"
-                          Label="Invertieren">
+            <AppBarButton Label="Invertieren"
+                          Command="{x:Bind ViewModel.InvertAllCommand}"
+                          IsEnabled="{x:Bind ViewModel.CanModifyAchievements, Mode=OneWay}">
                 <AppBarButton.Icon>
                     <FontIcon Glyph="&#xE8AB;"/>
                 </AppBarButton.Icon>
             </AppBarButton>
             <AppBarSeparator/>
-            <AppBarButton x:Name="StatisticsButton"
+            <AppBarButton Tag="StatisticsButton"
                           Label="Statistiken">
                 <AppBarButton.Icon>
                     <FontIcon Glyph="&#xE9D9;"/>
                 </AppBarButton.Icon>
             </AppBarButton>
             <CommandBar.SecondaryCommands>
-                <AppBarButton x:Name="ResetAllButton"
-                              Icon="Delete" 
-                              Label="Alle Stats zurücksetzen"/>
+                <AppBarButton Icon="Delete" 
+                              Label="Alle Stats zurücksetzen"
+                              Command="{x:Bind ViewModel.ResetAllCommand}"
+                              IsEnabled="{x:Bind ViewModel.CanModifyAchievements, Mode=OneWay}"/>
             </CommandBar.SecondaryCommands>
         </CommandBar>
 
@@ -121,17 +125,17 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <AutoSuggestBox x:Name="SearchBox"
+                <AutoSuggestBox
+                            Tag="SearchBox"
                             PlaceholderText="Achievement suchen..."
-                            QueryIcon="Find"
-                            TextChanged="SearchBox_TextChanged"/>
+                            QueryIcon="Find"/>
 
-            <ComboBox x:Name="FilterComboBox"
+                <ComboBox
+                      Tag="FilterComboBox"
                       Grid.Column="1"
                       Margin="16,0,0,0"
                       Width="150"
-                      SelectedIndex="0"
-                      SelectionChanged="FilterComboBox_SelectionChanged">
+                      SelectedIndex="0">
                 <ComboBoxItem Content="Alle"/>
                 <ComboBoxItem Content="Freigeschaltet"/>
                 <ComboBoxItem Content="Gesperrt"/>
@@ -139,12 +143,10 @@
             </ComboBox>
         </Grid>
 
-        <!-- Achievements List -->
-        <ListView x:Name="AchievementsListView"
-              Grid.Row="4"
-              ItemsSource="{x:Bind ViewModel.FilteredAchievements, Mode=OneWay}"
-              SelectionMode="None"
-              ContainerContentChanging="AchievementsListView_ContainerContentChanging">
+                <!-- Achievements List -->
+                    <ListView Grid.Row="4"
+                                ItemsSource="{x:Bind ViewModel.FilteredAchievements, Mode=OneWay}"
+                                SelectionMode="None">
             <ListView.ItemContainerTransitions>
                 <TransitionCollection>
                     <AddDeleteThemeTransition/>
@@ -183,7 +185,7 @@
 
                             <!-- Unlock Checkbox -->
                             <CheckBox IsChecked="{x:Bind IsUnlocked, Mode=TwoWay}"
-                                      IsEnabled="{x:Bind IsProtected, Mode=OneWay, Converter={StaticResource BoolNegationConverter}}"
+                                      IsEnabled="{x:Bind IsProtected, Converter={StaticResource BoolNegationConverter}, Mode=OneWay}"
                                       VerticalAlignment="Center"
                                       Margin="8,0"/>
 
@@ -202,8 +204,7 @@
                                     </Grid>
                                     <Image x:Name="AchievementIconImage"
                                            Stretch="UniformToFill"
-                                           Opacity="0"
-                                           ImageOpened="AchievementIcon_ImageOpened"/>
+                                           Opacity="0"/>
                                 </Grid>
                             </Border>
 
@@ -215,12 +216,12 @@
                                     <FontIcon Glyph="&#xE72E;" 
                                               FontSize="12"
                                               Foreground="{ThemeResource SystemFillColorCautionBrush}"
-                                              Visibility="{x:Bind IsModified, Mode=OneWay}"
+                                              Visibility="{x:Bind IsModified, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
                                               ToolTipService.ToolTip="Geändert"/>
                                     <FontIcon Glyph="&#xE72E;" 
                                               FontSize="12"
                                               Foreground="{ThemeResource SystemFillColorCriticalBrush}"
-                                              Visibility="{x:Bind IsProtected, Mode=OneWay}"
+                                              Visibility="{x:Bind IsProtected, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}"
                                               ToolTipService.ToolTip="Geschützt"/>
                                 </StackPanel>
                                 <TextBlock Text="{x:Bind Description, Mode=OneWay}" 
@@ -231,14 +232,18 @@
                             </StackPanel>
 
                             <!-- Unlock Time -->
-                            <TextBlock Grid.Column="3" 
-                                       VerticalAlignment="Center"
-                                       Style="{StaticResource CaptionTextBlockStyle}"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                       Visibility="{x:Bind IsUnlocked, Mode=OneWay}">
-                                <Run Text="Freigeschaltet:"/>
-                                <Run Text="{x:Bind UnlockTime, Mode=OneWay}"/>
-                            </TextBlock>
+                            <StackPanel Grid.Column="3" 
+                                        Orientation="Horizontal"
+                                        Spacing="4"
+                                        VerticalAlignment="Center"
+                                        Visibility="{x:Bind IsUnlocked, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <TextBlock Text="Freigeschaltet:"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                <TextBlock Text="{x:Bind UnlockTime, Mode=OneWay}"
+                                           Style="{StaticResource CaptionTextBlockStyle}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                            </StackPanel>
                         </Grid>
                     </Border>
                 </DataTemplate>
@@ -255,18 +260,18 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
 
-            <TextBlock x:Name="StatusText"
-                       VerticalAlignment="Center"
-                       Style="{StaticResource CaptionTextBlockStyle}">
-                <Run Text="{x:Bind ViewModel.FilteredTotalCount, Mode=OneWay}"/>
-                <Run Text="Achievements angezeigt"/>
-            </TextBlock>
+            <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                <TextBlock Text="{x:Bind ViewModel.FilteredTotalCount, Mode=OneWay}"
+                           Style="{StaticResource CaptionTextBlockStyle}"/>
+                <TextBlock Text="Achievements angezeigt"
+                           Style="{StaticResource CaptionTextBlockStyle}"/>
+            </StackPanel>
 
                 <StackPanel Grid.Column="1" 
                     Orientation="Horizontal"
                     Spacing="8"
                     VerticalAlignment="Center"
-                    Visibility="{x:Bind ViewModel.IsPagingEnabled, Mode=OneWay}">
+                    Visibility="{x:Bind ViewModel.IsPagingEnabled, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                 <Button Content="&#xE72B;"
                     FontFamily="Segoe Fluent Icons"
                     Width="32" Height="28"
@@ -285,7 +290,7 @@
                 <StackPanel Grid.Column="2" 
                         Orientation="Horizontal" 
                         Spacing="8"
-                        Visibility="{x:Bind ViewModel.HasUnsavedChanges, Mode=OneWay}">
+                     Visibility="{x:Bind ViewModel.HasUnsavedChanges, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
                 <FontIcon Glyph="&#xE7BA;" FontSize="12" 
                           Foreground="{ThemeResource SystemFillColorCautionBrush}"/>
                 <TextBlock Text="Ungespeicherte Änderungen" 
@@ -295,7 +300,7 @@
         </Grid>
 
         <!-- Loading Overlay -->
-        <Grid x:Name="LoadingOverlay"
+          <Grid Tag="LoadingOverlay"
               Grid.RowSpan="6"
               Visibility="Collapsed"
               Background="{ThemeResource AcrylicBackgroundFillColorDefaultBrush}">
@@ -309,21 +314,13 @@
         </Grid>
 
         <!-- Error Info Bar -->
-        <InfoBar x:Name="ErrorInfoBar"
+        <InfoBar Tag="ErrorInfoBar"
                  Grid.Row="4"
                  VerticalAlignment="Top"
                  IsOpen="False"
                  Severity="Error"
                  Title="Fehler"/>
         
-        <!-- Enhanced Notification Bar -->
-        <controls:NotificationBar x:Name="NotificationBar"
-                                  Grid.Row="4"
-                                  VerticalAlignment="Top"
-                                  Margin="0,8,0,0"/>
-        
-        <!-- Confetti Celebration Overlay -->
-        <controls:ConfettiControl x:Name="ConfettiOverlay"
-                                  Grid.RowSpan="6"/>
+        <!-- NotificationBar is created in code-behind to avoid WinRT Connect cast issues -->
     </Grid>
 </Page>

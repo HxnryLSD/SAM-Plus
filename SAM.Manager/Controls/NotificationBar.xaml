@@ -2,10 +2,9 @@
 <UserControl
     x:Class="SAM.Manager.Controls.NotificationBar"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:local="using:SAM.Manager.Controls">
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <Grid x:Name="RootGrid" 
+    <Grid Tag="RootGrid" 
           Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
           BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
           BorderThickness="1"
@@ -14,7 +13,7 @@
           Visibility="Collapsed"
           Opacity="0">
         <Grid.RenderTransform>
-            <TranslateTransform x:Name="SlideTransform" Y="-20"/>
+            <TranslateTransform Y="-20"/>
         </Grid.RenderTransform>
         
         <Grid.ColumnDefinitions>
@@ -25,12 +24,12 @@
         </Grid.ColumnDefinitions>
         
         <!-- Icon -->
-        <Border x:Name="IconBorder"
+        <Border Tag="IconBorder"
                 Width="32" Height="32"
                 CornerRadius="16"
                 Margin="0,0,12,0"
                 VerticalAlignment="Center">
-            <FontIcon x:Name="StatusIcon" 
+            <FontIcon Tag="StatusIcon" 
                       FontSize="16"
                       HorizontalAlignment="Center"
                       VerticalAlignment="Center"/>
@@ -38,10 +37,10 @@
         
         <!-- Message Content -->
         <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
-            <TextBlock x:Name="TitleText"
+            <TextBlock Tag="TitleText"
                        Style="{StaticResource BodyStrongTextBlockStyle}"
                        TextTrimming="CharacterEllipsis"/>
-            <TextBlock x:Name="MessageText"
+            <TextBlock Tag="MessageText"
                        Style="{StaticResource CaptionTextBlockStyle}"
                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                        TextWrapping="Wrap"
@@ -50,7 +49,7 @@
         </StackPanel>
         
         <!-- Progress Ring (for async operations) -->
-        <ProgressRing x:Name="ProgressIndicator"
+        <ProgressRing Tag="ProgressIndicator"
                       Grid.Column="2"
                       Width="20" Height="20"
                       Margin="12,0"
@@ -58,11 +57,10 @@
                       Visibility="Collapsed"/>
         
         <!-- Close Button -->
-        <Button x:Name="CloseButton"
+        <Button Tag="CloseButton"
                 Grid.Column="3"
                 Style="{StaticResource AlternateCloseButtonStyle}"
                 Padding="4"
-                Click="CloseButton_Click"
                 Visibility="Collapsed">
             <FontIcon Glyph="&#xE711;" FontSize="12"/>
         </Button>

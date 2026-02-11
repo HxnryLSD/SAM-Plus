@@ -103,7 +103,6 @@
 
                         <ColorPicker x:Name="AccentColorPicker"
                                      IsAlphaEnabled="True"
-                                     IsCompact="True"
                                      ColorChanged="AccentColorPicker_ColorChanged"
                                      Visibility="Collapsed"/>
                     </StackPanel>

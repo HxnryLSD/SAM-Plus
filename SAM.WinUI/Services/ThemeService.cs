@@ -23,6 +23,7 @@
 using Microsoft.UI;
 using Microsoft.UI.Xaml;
 using SAM.Core.Services;
+using Windows.UI;
 
 namespace SAM.WinUI.Services;
 

@@ -46,10 +46,35 @@ public enum NotificationSeverity
 public sealed partial class NotificationBar : UserControl
 {
     private DispatcherTimer? _autoHideTimer;
+    private Grid? _rootGrid;
+    private TranslateTransform? _slideTransform;
+    private Border? _iconBorder;
+    private FontIcon? _statusIcon;
+    private TextBlock? _titleText;
+    private TextBlock? _messageText;
+    private ProgressRing? _progressIndicator;
+    private Button? _closeButton;
     
     public NotificationBar()
     {
         InitializeComponent();
+        Loaded += NotificationBar_Loaded;
+    }
+
+    private void NotificationBar_Loaded(object sender, RoutedEventArgs e)
+    {
+        _rootGrid = FindByTag<Grid>("RootGrid");
+        _slideTransform = _rootGrid?.RenderTransform as TranslateTransform;
+        _iconBorder = FindByTag<Border>("IconBorder");
+        _statusIcon = FindByTag<FontIcon>("StatusIcon");
+        _titleText = FindByTag<TextBlock>("TitleText");
+        _messageText = FindByTag<TextBlock>("MessageText");
+        _progressIndicator = FindByTag<ProgressRing>("ProgressIndicator");
+        _closeButton = FindByTag<Button>("CloseButton");
+        if (_closeButton is not null)
+        {
+            _closeButton.Click += async (s, args) => await HideAsync();
+        }
     }
 
     /// <summary>
@@ -67,28 +92,37 @@ public sealed partial class NotificationBar : UserControl
         _autoHideTimer?.Stop();
         
         // Set content
-        TitleText.Text = title;
+        if (_titleText is not null) _titleText.Text = title;
         
         if (!string.IsNullOrEmpty(message))
         {
-            MessageText.Text = message;
-            MessageText.Visibility = Visibility.Visible;
+            if (_messageText is not null)
+            {
+                _messageText.Text = message;
+                _messageText.Visibility = Visibility.Visible;
+            }
         }
         else
         {
-            MessageText.Visibility = Visibility.Collapsed;
+            if (_messageText is not null)
+                _messageText.Visibility = Visibility.Collapsed;
         }
         
         // Set icon and colors based on severity
         ApplySeverityStyle(severity);
         
         // Show/hide progress and close button
-        ProgressIndicator.IsActive = showProgress;
-        ProgressIndicator.Visibility = showProgress ? Visibility.Visible : Visibility.Collapsed;
-        CloseButton.Visibility = isClosable ? Visibility.Visible : Visibility.Collapsed;
+        if (_progressIndicator is not null)
+        {
+            _progressIndicator.IsActive = showProgress;
+            _progressIndicator.Visibility = showProgress ? Visibility.Visible : Visibility.Collapsed;
+        }
+        if (_closeButton is not null)
+            _closeButton.Visibility = isClosable ? Visibility.Visible : Visibility.Collapsed;
         
         // Show with animation
-        RootGrid.Visibility = Visibility.Visible;
+        if (_rootGrid is not null)
+            _rootGrid.Visibility = Visibility.Visible;
         await AnimateShowAsync();
         
         // Setup auto-hide if specified
@@ -132,7 +166,8 @@ public sealed partial class NotificationBar : UserControl
     {
         _autoHideTimer?.Stop();
         await AnimateHideAsync();
-        RootGrid.Visibility = Visibility.Collapsed;
+        if (_rootGrid is not null)
+            _rootGrid.Visibility = Visibility.Collapsed;
     }
 
     private void ApplySeverityStyle(NotificationSeverity severity)
@@ -145,14 +180,25 @@ public sealed partial class NotificationBar : UserControl
             _ => ("\uE946", Color.FromArgb(255, 0, 120, 212), Color.FromArgb(20, 0, 120, 212))
         };
         
-        StatusIcon.Glyph = icon;
-        StatusIcon.Foreground = new SolidColorBrush(iconColor);
-        IconBorder.Background = new SolidColorBrush(bgColor);
-        RootGrid.BorderBrush = new SolidColorBrush(Color.FromArgb(60, iconColor.R, iconColor.G, iconColor.B));
+        if (_statusIcon is not null)
+        {
+            _statusIcon.Glyph = icon;
+            _statusIcon.Foreground = new SolidColorBrush(iconColor);
+        }
+        if (_iconBorder is not null)
+            _iconBorder.Background = new SolidColorBrush(bgColor);
+        if (_rootGrid is not null)
+            _rootGrid.BorderBrush = new SolidColorBrush(Color.FromArgb(60, iconColor.R, iconColor.G, iconColor.B));
     }
 
     private async Task AnimateShowAsync()
     {
+        if (_slideTransform is null || _rootGrid is null)
+        {
+            await Task.CompletedTask;
+            return;
+        }
+        
         var storyboard = new Storyboard();
         
         // Slide in from top
@@ -163,7 +209,7 @@ public sealed partial class NotificationBar : UserControl
             Duration = TimeSpan.FromMilliseconds(250),
             EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
         };
-        Storyboard.SetTarget(slideAnimation, SlideTransform);
+        Storyboard.SetTarget(slideAnimation, _slideTransform);
         Storyboard.SetTargetProperty(slideAnimation, "Y");
         storyboard.Children.Add(slideAnimation);
         
@@ -175,7 +221,7 @@ public sealed partial class NotificationBar : UserControl
             Duration = TimeSpan.FromMilliseconds(200),
             EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseOut }
         };
-        Storyboard.SetTarget(fadeAnimation, RootGrid);
+        Storyboard.SetTarget(fadeAnimation, _rootGrid);
         Storyboard.SetTargetProperty(fadeAnimation, "Opacity");
         storyboard.Children.Add(fadeAnimation);
         
@@ -185,6 +231,12 @@ public sealed partial class NotificationBar : UserControl
 
     private async Task AnimateHideAsync()
     {
+        if (_slideTransform is null || _rootGrid is null)
+        {
+            await Task.CompletedTask;
+            return;
+        }
+        
         var storyboard = new Storyboard();
         
         // Slide out to top
@@ -194,7 +246,7 @@ public sealed partial class NotificationBar : UserControl
             Duration = TimeSpan.FromMilliseconds(200),
             EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
         };
-        Storyboard.SetTarget(slideAnimation, SlideTransform);
+        Storyboard.SetTarget(slideAnimation, _slideTransform);
         Storyboard.SetTargetProperty(slideAnimation, "Y");
         storyboard.Children.Add(slideAnimation);
         
@@ -205,7 +257,7 @@ public sealed partial class NotificationBar : UserControl
             Duration = TimeSpan.FromMilliseconds(200),
             EasingFunction = new QuadraticEase { EasingMode = EasingMode.EaseIn }
         };
-        Storyboard.SetTarget(fadeAnimation, RootGrid);
+        Storyboard.SetTarget(fadeAnimation, _rootGrid);
         Storyboard.SetTargetProperty(fadeAnimation, "Opacity");
         storyboard.Children.Add(fadeAnimation);
         
@@ -216,5 +268,31 @@ public sealed partial class NotificationBar : UserControl
     private async void CloseButton_Click(object sender, RoutedEventArgs e)
     {
         await HideAsync();
+    }
+
+    private T? FindByTag<T>(string tag) where T : DependencyObject
+    {
+        if (Content is not DependencyObject root)
+            return null;
+        return FindByTagRecursive<T>(root, tag);
+    }
+
+    private static T? FindByTagRecursive<T>(DependencyObject parent, string tag) where T : DependencyObject
+    {
+        // Check parent itself
+        if (parent is FrameworkElement fe && string.Equals(fe.Tag as string, tag, StringComparison.Ordinal) && parent is T match)
+            return match;
+        
+        var count = VisualTreeHelper.GetChildrenCount(parent);
+        for (var i = 0; i < count; i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is FrameworkElement childFe && string.Equals(childFe.Tag as string, tag, StringComparison.Ordinal) && child is T typed)
+                return typed;
+            var result = FindByTagRecursive<T>(child, tag);
+            if (result is not null)
+                return result;
+        }
+        return null;
     }
 }

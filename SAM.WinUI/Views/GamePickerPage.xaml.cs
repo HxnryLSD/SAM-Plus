@@ -331,10 +331,17 @@ public sealed partial class GamePickerPage : Page
 
     private void GamesRepeater_ElementPrepared(ItemsRepeater sender, ItemsRepeaterElementPreparedEventArgs args)
     {
-        if (args.Element is not FrameworkElement element || element.DataContext is not GameModel game)
+        if (args.Element is not FrameworkElement element)
         {
             return;
         }
+
+        if (sender.ItemsSourceView?.GetAt(args.Index) is not GameModel game)
+        {
+            return;
+        }
+
+        element.DataContext = game;
 
         var image = element.FindName("GameImage") as Image;
         var placeholder = element.FindName("ImagePlaceholder") as FrameworkElement;
@@ -370,6 +377,8 @@ public sealed partial class GamePickerPage : Page
         {
             return;
         }
+
+        element.DataContext = null;
 
         var image = element.FindName("GameImage") as Image;
         var placeholder = element.FindName("ImagePlaceholder") as FrameworkElement;

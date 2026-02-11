@@ -41,6 +41,7 @@ public sealed partial class ConfettiControl : UserControl
     private readonly Random _random = new();
     private readonly List<Rectangle> _particles = [];
     private DispatcherTimer? _cleanupTimer;
+    private Canvas? _confettiCanvas;
     
     // Confetti colors (celebration palette)
     private static readonly Color[] ConfettiColors =
@@ -64,6 +65,15 @@ public sealed partial class ConfettiControl : UserControl
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        // Find canvas by Tag to avoid x:Name Connect cast issues
+        _confettiCanvas = Content as Canvas;
+        if (_confettiCanvas is null && Content is FrameworkElement fe)
+        {
+            // Fallback: check Tag
+            if (fe is Canvas c && string.Equals(c.Tag as string, "ConfettiCanvas", StringComparison.Ordinal))
+                _confettiCanvas = c;
+        }
+        
         // Setup cleanup timer
         _cleanupTimer = new DispatcherTimer
         {
@@ -95,6 +105,8 @@ public sealed partial class ConfettiControl : UserControl
 
     private void SpawnConfetti(int count)
     {
+        if (_confettiCanvas is null) return;
+        
         var width = ActualWidth > 0 ? ActualWidth : 800;
         var height = ActualHeight > 0 ? ActualHeight : 600;
         
@@ -102,7 +114,7 @@ public sealed partial class ConfettiControl : UserControl
         {
             var particle = CreateParticle();
             _particles.Add(particle);
-            ConfettiCanvas.Children.Add(particle);
+            _confettiCanvas.Children.Add(particle);
             
             // Random starting position (top of screen, spread horizontally)
             var startX = _random.NextDouble() * width;
@@ -235,9 +247,12 @@ public sealed partial class ConfettiControl : UserControl
 
     private void ClearParticles()
     {
-        foreach (var particle in _particles)
+        if (_confettiCanvas is not null)
         {
-            ConfettiCanvas.Children.Remove(particle);
+            foreach (var particle in _particles)
+            {
+                _confettiCanvas.Children.Remove(particle);
+            }
         }
         _particles.Clear();
     }
