@@ -40,8 +40,8 @@ SAM 8.0 uses a **two-application architecture** to solve Steam's AppID binding i
 
 | Version | Download | Description |
 |---------|----------|-------------|
-| **SAM v8.0** | [Latest Release](https://github.com/gibbed/SteamAchievementManager/releases/latest) | Recommended, modern WinUI 3 version |
-| **SAM Classic (v7.x)** | [All Releases](https://github.com/gibbed/SteamAchievementManager/releases) | Legacy WinForms version |
+| **SAM v8.0** | [Latest Release](https://github.com/HxnryLSD/SAM-Plus/releases/latest) | Recommended, modern WinUI 3 version |
+| **SAM Classic (v7.x)** | [Releases](https://github.com/gibbed/SteamAchievementManager/releases) | Legacy WinForms version |
 
 ---
 
