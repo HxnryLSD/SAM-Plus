@@ -32,13 +32,32 @@ namespace SAM.Core.Services;
 public class GameCacheService : IGameCacheService, IDisposable
 {
     private readonly string _connectionString;
+    private readonly string? _databasePath;
+    private readonly bool _keepAliveConnection;
+    private SqliteConnection? _keepAliveConnectionInstance;
     private readonly SemaphoreSlim _lock = new(1, 1);
     private bool _initialized;
     private bool _disposed;
 
     public GameCacheService()
     {
-        _connectionString = $"Data Source={AppPaths.DatabasePath}";
+        _databasePath = AppPaths.DatabasePath;
+        _connectionString = $"Data Source={_databasePath}";
+        _keepAliveConnection = false;
+    }
+
+    public GameCacheService(string databasePath)
+    {
+        _databasePath = databasePath;
+        _connectionString = $"Data Source={_databasePath}";
+        _keepAliveConnection = false;
+    }
+
+    public GameCacheService(string connectionString, string? databasePath, bool keepAliveConnection)
+    {
+        _connectionString = connectionString;
+        _databasePath = databasePath;
+        _keepAliveConnection = keepAliveConnection;
     }
 
     private async Task EnsureInitializedAsync(CancellationToken cancellationToken)
@@ -50,8 +69,7 @@ public class GameCacheService : IGameCacheService, IDisposable
         {
             if (_initialized) return;
 
-            await using var connection = new SqliteConnection(_connectionString);
-            await connection.OpenAsync(cancellationToken);
+            await using var connection = await OpenConnectionAsync(cancellationToken);
 
             var createTableSql = @"
                 CREATE TABLE IF NOT EXISTS Games (
@@ -93,8 +111,7 @@ public class GameCacheService : IGameCacheService, IDisposable
     {
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await OpenConnectionAsync(cancellationToken);
 
         var sql = "SELECT * FROM Games WHERE AppId = @AppId";
         await using var command = new SqliteCommand(sql, connection);
@@ -115,8 +132,7 @@ public class GameCacheService : IGameCacheService, IDisposable
 
         var games = new List<CachedGameInfo>();
 
-        await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await OpenConnectionAsync(cancellationToken);
 
         var sql = "SELECT * FROM Games ORDER BY Name";
         await using var command = new SqliteCommand(sql, connection);
@@ -136,8 +152,7 @@ public class GameCacheService : IGameCacheService, IDisposable
 
         var games = new List<CachedGameInfo>();
 
-        await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await OpenConnectionAsync(cancellationToken);
 
         var sql = @"
             SELECT g.* FROM Games g
@@ -160,18 +175,17 @@ public class GameCacheService : IGameCacheService, IDisposable
     {
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await OpenConnectionAsync(cancellationToken);
 
-        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
 
         try
         {
-            await InsertOrUpdateGameAsync(connection, game, cancellationToken);
+            await InsertOrUpdateGameAsync(connection, transaction, game, cancellationToken);
 
             if (!string.IsNullOrEmpty(steamId))
             {
-                await LinkGameToUserAsync(connection, steamId, game.AppId, cancellationToken);
+                await LinkGameToUserAsync(connection, transaction, steamId, game.AppId, cancellationToken);
             }
 
             await transaction.CommitAsync(cancellationToken);
@@ -187,20 +201,19 @@ public class GameCacheService : IGameCacheService, IDisposable
     {
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await OpenConnectionAsync(cancellationToken);
 
-        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        await using var transaction = (SqliteTransaction)await connection.BeginTransactionAsync(cancellationToken);
 
         try
         {
             foreach (var game in games)
             {
-                await InsertOrUpdateGameAsync(connection, game, cancellationToken);
+                await InsertOrUpdateGameAsync(connection, transaction, game, cancellationToken);
 
                 if (!string.IsNullOrEmpty(steamId))
                 {
-                    await LinkGameToUserAsync(connection, steamId, game.AppId, cancellationToken);
+                    await LinkGameToUserAsync(connection, transaction, steamId, game.AppId, cancellationToken);
                 }
             }
 
@@ -214,7 +227,11 @@ public class GameCacheService : IGameCacheService, IDisposable
         }
     }
 
-    private static async Task InsertOrUpdateGameAsync(SqliteConnection connection, CachedGameInfo game, CancellationToken cancellationToken)
+    private static async Task InsertOrUpdateGameAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        CachedGameInfo game,
+        CancellationToken cancellationToken)
     {
         var sql = @"
             INSERT INTO Games (AppId, Name, AchievementCount, UnlockedCount, HasDrm, ImageUrl, LastUpdated, LastPlayed, PlaytimeMinutes)
@@ -229,7 +246,7 @@ public class GameCacheService : IGameCacheService, IDisposable
                 LastPlayed = COALESCE(excluded.LastPlayed, LastPlayed),
                 PlaytimeMinutes = CASE WHEN excluded.PlaytimeMinutes > 0 THEN excluded.PlaytimeMinutes ELSE PlaytimeMinutes END";
 
-        await using var command = new SqliteCommand(sql, connection);
+        await using var command = new SqliteCommand(sql, connection, transaction);
         command.Parameters.AddWithValue("@AppId", game.AppId);
         command.Parameters.AddWithValue("@Name", game.Name);
         command.Parameters.AddWithValue("@AchievementCount", game.AchievementCount);
@@ -243,10 +260,15 @@ public class GameCacheService : IGameCacheService, IDisposable
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private static async Task LinkGameToUserAsync(SqliteConnection connection, string steamId, uint appId, CancellationToken cancellationToken)
+    private static async Task LinkGameToUserAsync(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string steamId,
+        uint appId,
+        CancellationToken cancellationToken)
     {
         var sql = "INSERT OR IGNORE INTO UserGames (SteamId, AppId) VALUES (@SteamId, @AppId)";
-        await using var command = new SqliteCommand(sql, connection);
+        await using var command = new SqliteCommand(sql, connection, transaction);
         command.Parameters.AddWithValue("@SteamId", steamId);
         command.Parameters.AddWithValue("@AppId", appId);
         await command.ExecuteNonQueryAsync(cancellationToken);
@@ -256,8 +278,7 @@ public class GameCacheService : IGameCacheService, IDisposable
     {
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await OpenConnectionAsync(cancellationToken);
 
         var sql = @"
             UPDATE Games 
@@ -277,8 +298,7 @@ public class GameCacheService : IGameCacheService, IDisposable
     {
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await OpenConnectionAsync(cancellationToken);
 
         var sql = "DELETE FROM Games WHERE AppId = @AppId";
         await using var command = new SqliteCommand(sql, connection);
@@ -291,8 +311,7 @@ public class GameCacheService : IGameCacheService, IDisposable
     {
         await EnsureInitializedAsync(cancellationToken);
 
-        await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await OpenConnectionAsync(cancellationToken);
 
         await using var command = new SqliteCommand("DELETE FROM UserGames; DELETE FROM Games;", connection);
         await command.ExecuteNonQueryAsync(cancellationToken);
@@ -337,9 +356,9 @@ public class GameCacheService : IGameCacheService, IDisposable
 
         // Get database file size
         long dbSize = 0;
-        if (File.Exists(AppPaths.DatabasePath))
+        if (!string.IsNullOrEmpty(_databasePath) && File.Exists(_databasePath))
         {
-            dbSize = new FileInfo(AppPaths.DatabasePath).Length;
+            dbSize = new FileInfo(_databasePath).Length;
         }
 
         return new CacheStatistics
@@ -362,8 +381,7 @@ public class GameCacheService : IGameCacheService, IDisposable
 
         var games = new List<CachedGameInfo>();
 
-        await using var connection = new SqliteConnection(_connectionString);
-        await connection.OpenAsync(cancellationToken);
+        await using var connection = await OpenConnectionAsync(cancellationToken);
 
         var sql = "SELECT * FROM Games WHERE Name LIKE @Query ORDER BY Name";
         await using var command = new SqliteCommand(sql, connection);
@@ -398,6 +416,27 @@ public class GameCacheService : IGameCacheService, IDisposable
     {
         if (_disposed) return;
         _disposed = true;
+        _keepAliveConnectionInstance?.Dispose();
         _lock.Dispose();
+    }
+
+    private async Task<SqliteConnection> OpenConnectionAsync(CancellationToken cancellationToken)
+    {
+        if (_keepAliveConnection)
+        {
+            if (_keepAliveConnectionInstance == null)
+            {
+                _keepAliveConnectionInstance = new SqliteConnection(_connectionString);
+                await _keepAliveConnectionInstance.OpenAsync(cancellationToken);
+            }
+
+            var connection = new SqliteConnection(_connectionString);
+            await connection.OpenAsync(cancellationToken);
+            return connection;
+        }
+
+        var fallback = new SqliteConnection(_connectionString);
+        await fallback.OpenAsync(cancellationToken);
+        return fallback;
     }
 }

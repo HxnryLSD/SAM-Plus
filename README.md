@@ -57,7 +57,7 @@ SAM 8.0 uses a **two-application architecture** to solve Steam's AppID binding i
 ### SAM Classic (v7.x)
 
 - [x] Windows 7 or later
-- [x] .NET 10.0 Runtime
+- [x] .NET 10.0 Runtime *(targets net10.0-windows)*
 - [x] Steam Client running
 
 ---
@@ -74,14 +74,14 @@ See [BUILDING.md](BUILDING.md) for detailed build instructions.
 |-------------------|---------------------------------------|------------------|-----------------|
 | **SAM.WinUI**     | Game Picker Application               | WinUI 3 App      | ✅ Active       |
 | **SAM.Manager**   | Achievement Manager (per-game)        | WinUI 3 App      | ✅ Active       |
-| **SAM.Core**      | Shared ViewModels & Services          | Class Library    | ✅ Active       |
-| **SAM.UI.Shared** | Shared UI Components & Styles         | WinUI 3 Library  | ✅ Active       |
-| **SAM.API**       | Steam API Wrapper (32-bit)            | Class Library    | ✅ Active       |
-| ~~SAM.Picker~~    | Legacy Game Picker (WinForms)         | WinForms App     | ⚠️ Deprecated   |
-| ~~SAM.Game~~      | Legacy Achievement Manager (WinForms) | WinForms App     | ⚠️ Deprecated   |
+| **SAM.Core**       | Shared ViewModels & Services          | Class Library    | ✅ Active       |
+| **SAM.Core.Tests** | Unit Tests (xUnit + Moq)              | Test Project     | ✅ Active       |
+| **SAM.API**        | Steam API Wrapper (32-bit)            | Class Library    | ✅ Active       |
+| ~~SAM.Picker~~     | Legacy Game Picker (WinForms)         | WinForms App     | ⚠️ Deprecated   |
+| ~~SAM.Game~~       | Legacy Achievement Manager (WinForms) | WinForms App     | ⚠️ Deprecated   |
 
 > [!WARNING]
-> `SAM.Picker` and `SAM.Game` are deprecated and will be removed in a future release. Please migrate to **SAM.WinUI** + **SAM.Manager**.
+> `SAM.Picker` and `SAM.Game` (located in the `Deprecated/` folder) are deprecated and will be removed in a future release. Please migrate to **SAM.WinUI** + **SAM.Manager**.
 
 ---
 

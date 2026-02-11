@@ -59,6 +59,15 @@ public class AchievementManagerViewModelTests
         ];
     }
 
+    private static List<StatModel> CreateTestStats()
+    {
+        return
+        [
+            new IntStatModel { Id = "STAT_1", DisplayName = "Kills", IntValue = 5, OriginalValue = 5 },
+            new IntStatModel { Id = "STAT_2", DisplayName = "Assists", IntValue = 2, OriginalValue = 2 }
+        ];
+    }
+
     [Fact]
     public async Task InitializeAsync_LoadsAchievements()
     {
@@ -245,5 +254,188 @@ public class AchievementManagerViewModelTests
 
         // Assert
         Assert.Equal(string.Empty, _viewModel.HeaderImageUrl);
+    }
+
+    [Fact]
+    public async Task InvertAll_TogglesAllUnprotectedAchievements()
+    {
+        // Arrange
+        var achievements = CreateTestAchievements();
+        _achievementService.SetAchievements(achievements);
+        await _viewModel.InitializeCommand.ExecuteAsync(440L);
+
+        // Act
+        _viewModel.InvertAllCommand.Execute(null);
+
+        // Assert
+        Assert.True(_viewModel.Achievements.First(a => a.Id == "ACH_1").IsUnlocked);
+        Assert.False(_viewModel.Achievements.First(a => a.Id == "ACH_2").IsUnlocked);
+        Assert.True(_viewModel.Achievements.First(a => a.Id == "ACH_3").IsUnlocked);
+        Assert.True(_viewModel.Achievements.First(a => a.Id == "ACH_4").IsUnlocked);
+        Assert.False(_viewModel.Achievements.First(a => a.Id == "ACH_5").IsUnlocked);
+        Assert.True(_viewModel.HasUnsavedChanges);
+    }
+
+    [Fact]
+    public async Task StoreStats_ClearsModifiedFlagsAndUnsavedChanges()
+    {
+        // Arrange
+        var achievements = CreateTestAchievements();
+        achievements[0].IsModified = true;
+        achievements[1].IsModified = true;
+        var stats = CreateTestStats();
+        var modifiedStat = (IntStatModel)stats[0];
+        modifiedStat.IntValue = 10;
+
+        _achievementService.SetAchievements(achievements);
+        _achievementService.SetStats(stats);
+        await _viewModel.InitializeCommand.ExecuteAsync(440L);
+        _viewModel.HasUnsavedChanges = true;
+
+        // Act
+        await _viewModel.StoreStatsCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.False(_viewModel.HasUnsavedChanges);
+        Assert.All(_viewModel.Achievements, a => Assert.False(a.IsModified));
+        Assert.All(_viewModel.Statistics, s => Assert.False(s.IsModified));
+    }
+
+    [Fact]
+    public async Task ResetAll_ResetsAllAchievementsAndReloadsData()
+    {
+        // Arrange
+        var achievements = CreateTestAchievements();
+        achievements[0].IsUnlocked = true;
+        achievements[2].IsUnlocked = true;
+        _achievementService.SetAchievements(achievements);
+        await _viewModel.InitializeCommand.ExecuteAsync(440L);
+
+        // Act
+        await _viewModel.ResetAllCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.All(_viewModel.Achievements, a => Assert.False(a.IsUnlocked));
+    }
+
+    [Fact]
+    public async Task Refresh_ReloadsAchievementsFromService()
+    {
+        // Arrange
+        var initial = CreateTestAchievements();
+        _achievementService.SetAchievements(initial);
+        await _viewModel.InitializeCommand.ExecuteAsync(440L);
+
+        var updated = new List<AchievementModel>
+        {
+            new() { Id = "ACH_X", Name = "Updated", Description = "Updated", IsUnlocked = true }
+        };
+        _achievementService.SetAchievements(updated);
+
+        // Act
+        await _viewModel.RefreshCommand.ExecuteAsync(null);
+
+        // Assert
+        Assert.Single(_viewModel.Achievements);
+        Assert.Equal("ACH_X", _viewModel.Achievements[0].Id);
+    }
+
+    [Fact]
+    public async Task FilterType_Unlocked_ShowsOnlyUnlocked()
+    {
+        // Arrange
+        var achievements = CreateTestAchievements();
+        _achievementService.SetAchievements(achievements);
+        await _viewModel.InitializeCommand.ExecuteAsync(440L);
+
+        // Act
+        _viewModel.FilterType = AchievementFilterType.Unlocked;
+
+        // Assert
+        Assert.All(_viewModel.FilteredAchievements, a => Assert.True(a.IsUnlocked));
+    }
+
+    [Fact]
+    public async Task FilterType_Locked_ShowsOnlyLocked()
+    {
+        // Arrange
+        var achievements = CreateTestAchievements();
+        _achievementService.SetAchievements(achievements);
+        await _viewModel.InitializeCommand.ExecuteAsync(440L);
+
+        // Act
+        _viewModel.FilterType = AchievementFilterType.Locked;
+
+        // Assert
+        Assert.All(_viewModel.FilteredAchievements, a => Assert.False(a.IsUnlocked));
+    }
+
+    [Fact]
+    public async Task FilterType_Modified_ShowsOnlyModified()
+    {
+        // Arrange
+        var achievements = CreateTestAchievements();
+        achievements[0].IsModified = true;
+        _achievementService.SetAchievements(achievements);
+        await _viewModel.InitializeCommand.ExecuteAsync(440L);
+
+        // Act
+        _viewModel.FilterType = AchievementFilterType.Modified;
+
+        // Assert
+        Assert.All(_viewModel.FilteredAchievements, a => Assert.True(a.IsModified));
+    }
+
+    [Fact]
+    public async Task CompletionPercentage_IsZeroWhenNoAchievements()
+    {
+        // Arrange
+        _achievementService.SetAchievements([]);
+
+        // Act
+        await _viewModel.InitializeCommand.ExecuteAsync(440L);
+
+        // Assert
+        Assert.Equal(0d, _viewModel.CompletionPercentage);
+    }
+
+    [Theory]
+    [InlineData(5, 10, 50d)]
+    [InlineData(10, 10, 100d)]
+    public async Task CompletionPercentage_IsCalculatedCorrectly(int unlocked, int total, double expected)
+    {
+        // Arrange
+        var achievements = new List<AchievementModel>();
+        for (int i = 0; i < total; i++)
+        {
+            achievements.Add(new AchievementModel
+            {
+                Id = $"ACH_{i}",
+                Name = $"Ach {i}",
+                Description = "Test",
+                IsUnlocked = i < unlocked
+            });
+        }
+        _achievementService.SetAchievements(achievements);
+
+        // Act
+        await _viewModel.InitializeCommand.ExecuteAsync(440L);
+
+        // Assert
+        Assert.Equal(expected, _viewModel.CompletionPercentage, 5);
+    }
+
+    [Fact]
+    public async Task ProtectedWarningMessage_ContainsCountsWhenProtected()
+    {
+        // Arrange
+        var achievements = CreateTestAchievements();
+        _achievementService.SetAchievements(achievements);
+
+        // Act
+        await _viewModel.InitializeCommand.ExecuteAsync(440L);
+
+        // Assert
+        Assert.Contains("1 von 5 Erfolgen", _viewModel.ProtectedWarningMessage);
     }
 }

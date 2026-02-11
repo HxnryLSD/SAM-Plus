@@ -12,27 +12,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Modern Fluent Design with Mica backdrop
   - Automatic Dark/Light theme support
   - NavigationView-based layout
-  - GridView game picker with visual cards
-  - ListView achievement manager with progress tracking
-  - Statistics editor page
+  - GridView game picker with `GameCard` controls
+  - `AchievementCard` control for achievement display
   - Settings page with theme selection
   - Diagnostics page for troubleshooting
+  - About page with project information
   - Toast notifications for save operations
 
+- **SAM.Manager** - Dedicated WinUI 3 achievement manager for individual games
+  - `AchievementManagerPage` with progress tracking
+  - `StatisticsPage` for editing game statistics
+  - `ConfettiControl` for celebration effects
+  - `NotificationBar` control for in-app notifications
+
 - **SAM.Core** - New shared library with MVVM architecture
-  - ViewModels using CommunityToolkit.Mvvm
-  - Service layer with dependency injection
-  - `ISteamService` - Steam client wrapper
-  - `IAchievementService` - Achievement management
-  - `IImageCacheService` - Icon caching with HttpClient
-  - `ISettingsService` - Persistent settings storage
-  - `ILegacyMigrationService` - Migration from legacy versions
-  - Models: `GameModel`, `AchievementModel`, `StatModel`
+  - ViewModels: `GamePickerViewModel`, `AchievementManagerViewModel`, `ViewModelBase` using CommunityToolkit.Mvvm
+  - Service layer with dependency injection:
+    - `ISteamService` - Steam client wrapper
+    - `IAchievementService` - Achievement management
+    - `IImageCacheService` - Icon caching with HttpClient
+    - `ISettingsService` - Persistent settings storage (SQLite via Microsoft.Data.Sqlite)
+    - `ILegacyMigrationService` - Migration from legacy versions
+    - `IDrmProtectionService` - DRM protection detection for games
+    - `ILibraryFetchService` - Steam library fetching and caching
+    - `ILocalizationService` - Localization support
+    - `ISteamCallbackService` - Steam callback handling
+    - `IUserDataService` - User data persistence
+    - `IGameCacheService` - Game data caching
+  - Models: `GameModel`, `AchievementModel`, `StatModel`, `GameUserData`
+  - Utilities: `AppPaths`, `KeyValue`, `KeyValueType`, `SteamErrorHelper`, `StreamHelpers`
+
+- **SAM.Core.Tests** - Unit test suite using xUnit and Moq
+  - Service tests: `AchievementServiceTests`, `ImageCacheServiceTests`, `SettingsServiceTests`, `UserDataServiceTests`
+  - ViewModel tests: `AchievementManagerViewModelTests`, `GamePickerViewModelTests`
 
 - **Multi-Platform Support**
-  - x86 (32-bit) for Steam API compatibility
-  - x64 (64-bit) for SAM.Core and SAM.WinUI
-  - arm64 for SAM.Core and SAM.WinUI
+  - x86 (32-bit) for SAM.API and SAM.Core (Steam API compatibility)
+  - x86, x64, arm64 for SAM.WinUI and SAM.Manager
 
 ### Changed
 - Upgraded all projects to .NET 10.0
@@ -43,7 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Deprecated
 - **SAM.Picker** - Legacy WinForms game picker (use SAM.WinUI instead)
-- **SAM.Game** - Legacy WinForms achievement manager (use SAM.WinUI instead)
+- **SAM.Game** - Legacy WinForms achievement manager (use SAM.Manager instead)
 
 ### Fixed
 - Various null reference warnings
