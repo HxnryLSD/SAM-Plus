@@ -7,7 +7,7 @@
     xmlns:models="using:SAM.Core.Models"
     NavigationCacheMode="Disabled">
 
-    <Grid>
+    <Grid Padding="24">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="Auto"/>
@@ -16,31 +16,50 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <StackPanel Margin="0,0,0,16">
-            <TextBlock x:Name="GameNameText"
-                       Text="Statistiken" 
-                       Style="{StaticResource TitleLargeTextBlockStyle}"/>
-            <TextBlock x:Name="GameSubtitleText"
-                       Style="{StaticResource BodyTextBlockStyle}"
-                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
-        </StackPanel>
+        <Grid Margin="0,0,0,16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <StackPanel>
+                <TextBlock x:Name="GameNameText"
+                           Text="Statistiken" 
+                           Style="{StaticResource TitleLargeTextBlockStyle}"/>
+                <TextBlock x:Name="GameSubtitleText"
+                           Style="{StaticResource BodyTextBlockStyle}"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+            </StackPanel>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <TextBlock Text="Account:" 
+                           Style="{StaticResource BodyTextBlockStyle}"
+                           VerticalAlignment="Center"/>
+                <ComboBox x:Name="AccountComboBox"
+                          Width="220"
+                          SelectionChanged="AccountComboBox_SelectionChanged"/>
+            </StackPanel>
+        </Grid>
 
         <!-- Command Bar -->
         <CommandBar Grid.Row="1" 
                     DefaultLabelPosition="Right"
                     Background="Transparent">
-            <AppBarButton Icon="Refresh" 
-                          Label="Aktualisieren" 
+            <AppBarButton x:Name="RefreshButton"
+                          Icon="Refresh" 
+                          Label="Aktualisieren"
                           Click="RefreshButton_Click"/>
-            <AppBarButton Icon="Save" 
-                          Label="Speichern" 
+            <AppBarButton x:Name="SaveButton"
+                          Icon="Save" 
+                          Label="Speichern"
                           Click="SaveButton_Click">
                 <AppBarButton.KeyboardAccelerators>
                     <KeyboardAccelerator Modifiers="Control" Key="S"/>
                 </AppBarButton.KeyboardAccelerators>
             </AppBarButton>
             <AppBarSeparator/>
-            <AppBarButton Label="Alle zurücksetzen" 
+            <AppBarButton x:Name="ResetAllButton"
+                          Label="Alle zurücksetzen"
                           Click="ResetAllButton_Click">
                 <AppBarButton.Icon>
                     <FontIcon Glyph="&#xE74D;"/>
@@ -48,59 +67,128 @@
             </AppBarButton>
         </CommandBar>
 
-        <!-- Stats List -->
-        <ListView x:Name="StatsListView"
-                  Grid.Row="2"
-                  SelectionMode="None">
-            <ListView.ItemTemplate>
-                <DataTemplate x:DataType="models:StatModel">
-                    <Grid Padding="12"
-                          Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                          BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                          BorderThickness="1"
-                          CornerRadius="8"
-                          Margin="0,4"
-                          ColumnSpacing="16">
-                        
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="200"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
+        <!-- Stats + Graph -->
+        <Grid Grid.Row="2" ColumnSpacing="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="320"/>
+            </Grid.ColumnDefinitions>
 
-                        <!-- Stat Info -->
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Text="{x:Bind DisplayName}" 
-                                       Style="{StaticResource BodyStrongTextBlockStyle}"/>
-                            <TextBlock Text="{x:Bind Id}" 
-                                       Style="{StaticResource CaptionTextBlockStyle}"
-                                       Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                       IsTextSelectionEnabled="True"/>
-                        </StackPanel>
+            <!-- Stats List -->
+            <ListView x:Name="StatsListView"
+                      SelectionMode="Single"
+                      SelectionChanged="StatsListView_SelectionChanged">
+                <ListView.ItemTemplate>
+                    <DataTemplate>
+                        <Border Padding="12"
+                                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                                BorderThickness="1"
+                                CornerRadius="8"
+                                Margin="0,4">
+                            <Grid ColumnSpacing="16">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="200"/>
+                                    <ColumnDefinition Width="140"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
 
-                        <!-- Value Input -->
-                        <Grid Grid.Column="1" VerticalAlignment="Center">
-                            <TextBox Text="{x:Bind StringValue, Mode=TwoWay}"
-                                     Width="180"
-                                     HorizontalAlignment="Right"
-                                     TextChanged="ValueTextBox_TextChanged"/>
-                        </Grid>
+                                <!-- Stat Info -->
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding DisplayName}" 
+                                               Style="{StaticResource BodyStrongTextBlockStyle}"
+                                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                    <TextBlock Text="{Binding Id}" 
+                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                               IsTextSelectionEnabled="True"/>
+                                </StackPanel>
 
-                        <!-- Modified Indicator -->
-                        <Border Grid.Column="2"
-                                Background="{ThemeResource SystemFillColorCautionBackgroundBrush}"
-                                CornerRadius="4"
-                                Padding="8,4"
-                                VerticalAlignment="Center"
-                                Visibility="{x:Bind IsModified, Mode=OneWay, Converter={StaticResource BoolToVisibilityConverter}}">
-                            <TextBlock Text="Geändert" 
-                                       Style="{StaticResource CaptionTextBlockStyle}"
-                                       Foreground="{ThemeResource SystemFillColorCautionBrush}"/>
+                                <!-- Value Input -->
+                                <Grid Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBox Text="{Binding StringValue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                             Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                                             Width="180"
+                                             HorizontalAlignment="Right"
+                                             Loaded="ValueTextBox_Loaded"/>
+                                </Grid>
+
+                                <!-- Before/After -->
+                                <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
+                                    <TextBlock Text="Alt:"
+                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Text="{Binding OriginalStringValue}"
+                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                    <TextBlock Text="Neu:"
+                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+                                    <TextBlock Text="{Binding StringValue}"
+                                               Style="{StaticResource CaptionTextBlockStyle}"
+                                               Foreground="{ThemeResource TextFillColorPrimaryBrush}"/>
+                                </StackPanel>
+
+                                <!-- Warning + Modified Indicator -->
+                                <StackPanel Grid.Column="3" VerticalAlignment="Center" Spacing="4">
+                                    <StackPanel Orientation="Horizontal" Spacing="6"
+                                                Visibility="{Binding HasWarning, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <FontIcon Glyph="&#xE7BA;" 
+                                                  Foreground="{ThemeResource SystemFillColorCautionBrush}"
+                                                  FontSize="14"/>
+                                        <TextBlock Text="{Binding WarningMessage}"
+                                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                                   Foreground="{ThemeResource SystemFillColorCautionBrush}"/>
+                                    </StackPanel>
+                                    <Border Background="{ThemeResource SystemFillColorCautionBackgroundBrush}"
+                                            CornerRadius="4"
+                                            Padding="6,2"
+                                            Visibility="{Binding IsModified, Converter={StaticResource BoolToVisibilityConverter}}">
+                                        <TextBlock Text="Geändert" 
+                                                   Style="{StaticResource CaptionTextBlockStyle}"
+                                                   Foreground="{ThemeResource SystemFillColorCautionBrush}"/>
+                                    </Border>
+                                </StackPanel>
+
+                                <!-- Reset Button -->
+                                <Button Grid.Column="4"
+                                        Content="&#xE777;"
+                                        FontFamily="Segoe Fluent Icons"
+                                        Width="32" Height="28"
+                                        VerticalAlignment="Center"
+                                        IsEnabled="{Binding IsModified}"
+                                        Click="ResetStatButton_Click"/>
+                            </Grid>
                         </Border>
-                    </Grid>
-                </DataTemplate>
-            </ListView.ItemTemplate>
-        </ListView>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+
+            <!-- History Graph -->
+            <Border Grid.Column="1"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="12">
+                <StackPanel Spacing="8">
+                    <TextBlock x:Name="HistoryTitleText"
+                               Text="Verlauf"
+                               Style="{StaticResource BodyStrongTextBlockStyle}"/>
+                    <Canvas x:Name="HistoryCanvas"
+                            Height="180"
+                            Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                            SizeChanged="HistoryCanvas_SizeChanged"/>
+                    <TextBlock x:Name="HistoryEmptyText"
+                               Text="Kein Verlauf für diesen Stat"
+                               Style="{StaticResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               Visibility="Collapsed"/>
+                </StackPanel>
+            </Border>
+        </Grid>
 
         <!-- Status Bar -->
         <InfoBar x:Name="StatusInfoBar"

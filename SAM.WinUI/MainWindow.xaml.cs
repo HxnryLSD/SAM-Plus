@@ -20,6 +20,7 @@
  *    distribution.
  */
 
+using System;
 using System.Linq;
 using Microsoft.UI;
 using Microsoft.UI.Windowing;
@@ -41,6 +42,7 @@ public sealed partial class MainWindow : Window
 {
     private readonly INavigationService _navigationService;
     private readonly ILocalizationService _localizationService;
+    private readonly ISettingsService _settingsService;
     private AppWindow? _appWindow;
 
     public MainWindow()
@@ -60,6 +62,10 @@ public sealed partial class MainWindow : Window
             Log.Debug("Getting ILocalizationService from DI...");
             _localizationService = App.GetService<ILocalizationService>();
             _localizationService.LanguageChanged += OnLanguageChanged;
+
+            Log.Debug("Getting ISettingsService from DI...");
+            _settingsService = App.GetService<ISettingsService>();
+            ArgumentNullException.ThrowIfNull(_settingsService, nameof(_settingsService));
             
             Log.Debug("Setting ContentFrame to navigation service...");
             _navigationService.Frame = ContentFrame;
@@ -78,6 +84,8 @@ public sealed partial class MainWindow : Window
                 ContentFrame.NavigationFailed += ContentFrame_NavigationFailed;
             }
             Log.Debug("Event handlers attached");
+
+            Closed += MainWindow_Closed;
             
             Log.MethodExit("success");
         }
@@ -111,8 +119,8 @@ public sealed partial class MainWindow : Window
 
             if (_appWindow is not null)
             {
-                Log.Debug("Resizing window to 1280x800...");
-                _appWindow.Resize(new SizeInt32(1280, 800));
+                Log.Debug("Applying saved window placement...");
+                ApplyWindowPlacement(_appWindow, windowId, 1280, 800);
                 
                 Log.Debug("Setting window title...");
                 _appWindow.Title = "Steam Achievement Manager";
@@ -241,9 +249,79 @@ public sealed partial class MainWindow : Window
         }
     }
 
+    private void ApplyWindowPlacement(AppWindow appWindow, WindowId windowId, int defaultWidth, int defaultHeight)
+    {
+        var size = new SizeInt32(defaultWidth, defaultHeight);
+
+        if (_settingsService.HasWindowPlacement && _settingsService.WindowWidth > 0 && _settingsService.WindowHeight > 0)
+        {
+            size = new SizeInt32(_settingsService.WindowWidth, _settingsService.WindowHeight);
+        }
+
+        appWindow.Resize(size);
+
+        var targetX = _settingsService.WindowX;
+        var targetY = _settingsService.WindowY;
+        var displayArea = DisplayArea.GetFromPoint(new PointInt32(targetX, targetY), DisplayAreaFallback.Primary)
+            ?? DisplayArea.GetFromWindowId(windowId, DisplayAreaFallback.Primary);
+
+        if (displayArea is not null)
+        {
+            var work = displayArea.WorkArea;
+            if (size.Width > work.Width)
+            {
+                size.Width = work.Width;
+            }
+
+            if (size.Height > work.Height)
+            {
+                size.Height = work.Height;
+            }
+
+            appWindow.Resize(size);
+            var clampedX = Math.Clamp(targetX, work.X, work.X + work.Width - size.Width);
+            var clampedY = Math.Clamp(targetY, work.Y, work.Y + work.Height - size.Height);
+
+            if (!_settingsService.HasWindowPlacement)
+            {
+                clampedX = work.X + (work.Width - size.Width) / 2;
+                clampedY = work.Y + (work.Height - size.Height) / 2;
+            }
+
+            appWindow.Move(new PointInt32(clampedX, clampedY));
+        }
+    }
+
+    private async void MainWindow_Closed(object sender, WindowEventArgs args)
+    {
+        if (_appWindow is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var size = _appWindow.Size;
+            var position = _appWindow.Position;
+
+            _settingsService.WindowWidth = size.Width;
+            _settingsService.WindowHeight = size.Height;
+            _settingsService.WindowX = position.X;
+            _settingsService.WindowY = position.Y;
+            _settingsService.HasWindowPlacement = true;
+
+            await _settingsService.SaveAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Exception(ex, "Failed to save window placement");
+        }
+    }
+
     private void ApplyNavLocalization()
     {
         NavGamesItem.Content = Loc.Get("Nav.Games");
+        NavStatisticsItem.Content = Loc.Get("Nav.Statistics");
         NavDiagnosticsItem.Content = Loc.Get("Nav.Diagnostics");
         NavAboutItem.Content = Loc.Get("Nav.About");
         
@@ -295,6 +373,7 @@ public sealed partial class MainWindow : Window
                 pageType = tag switch
                 {
                     "games" => typeof(GamePickerPage),
+                    "statistics" => typeof(StatisticsPage),
                     "about" => typeof(AboutPage),
                     "diagnostics" => typeof(DiagnosticsPage),
                     _ => null

@@ -47,6 +47,21 @@ public abstract partial class StatModel : ObservableObject
     public abstract bool IsModified { get; set; }
     public abstract double MinValue { get; }
     public abstract double MaxValue { get; }
+
+    /// <summary>
+    /// Gets the original value as a string for comparison.
+    /// </summary>
+    public abstract string OriginalStringValue { get; }
+
+    /// <summary>
+    /// Gets whether the current value has a warning condition.
+    /// </summary>
+    public abstract bool HasWarning { get; }
+
+    /// <summary>
+    /// Gets the warning message for the current value, if any.
+    /// </summary>
+    public abstract string WarningMessage { get; }
     
     /// <summary>
     /// Gets or sets the value as a string for binding purposes.
@@ -99,6 +114,28 @@ public partial class IntStatModel : StatModel
         }
     }
 
+    public override string OriginalStringValue => OriginalValue.ToString();
+
+    public override bool HasWarning => !string.IsNullOrEmpty(WarningMessage);
+
+    public override string WarningMessage
+    {
+        get
+        {
+            if (IsIncrementOnly && IntValue < OriginalValue)
+            {
+                return "Nur erhoehbar";
+            }
+
+            if (IntValue < 0)
+            {
+                return "Negativer Wert";
+            }
+
+            return string.Empty;
+        }
+    }
+
     public override double MinValue => int.MinValue;
     public override double MaxValue => int.MaxValue;
 
@@ -106,6 +143,9 @@ public partial class IntStatModel : StatModel
     {
         _originalValue = IntValue;
         OnPropertyChanged(nameof(IsModified));
+        OnPropertyChanged(nameof(OriginalStringValue));
+        OnPropertyChanged(nameof(WarningMessage));
+        OnPropertyChanged(nameof(HasWarning));
     }
 
     partial void OnIntValueChanged(int value)
@@ -113,6 +153,8 @@ public partial class IntStatModel : StatModel
         OnPropertyChanged(nameof(Value));
         OnPropertyChanged(nameof(StringValue));
         OnPropertyChanged(nameof(IsModified));
+        OnPropertyChanged(nameof(WarningMessage));
+        OnPropertyChanged(nameof(HasWarning));
     }
 }
 
@@ -156,6 +198,33 @@ public partial class FloatStatModel : StatModel
         }
     }
 
+    public override string OriginalStringValue => OriginalValue.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    public override bool HasWarning => !string.IsNullOrEmpty(WarningMessage);
+
+    public override string WarningMessage
+    {
+        get
+        {
+            if (float.IsNaN(FloatValue) || float.IsInfinity(FloatValue))
+            {
+                return "Ungueltiger Wert";
+            }
+
+            if (IsIncrementOnly && FloatValue < OriginalValue)
+            {
+                return "Nur erhoehbar";
+            }
+
+            if (FloatValue < 0)
+            {
+                return "Negativer Wert";
+            }
+
+            return string.Empty;
+        }
+    }
+
     public override double MinValue => float.MinValue;
     public override double MaxValue => float.MaxValue;
 
@@ -163,6 +232,9 @@ public partial class FloatStatModel : StatModel
     {
         _originalValue = FloatValue;
         OnPropertyChanged(nameof(IsModified));
+        OnPropertyChanged(nameof(OriginalStringValue));
+        OnPropertyChanged(nameof(WarningMessage));
+        OnPropertyChanged(nameof(HasWarning));
     }
 
     partial void OnFloatValueChanged(float value)
@@ -170,5 +242,7 @@ public partial class FloatStatModel : StatModel
         OnPropertyChanged(nameof(Value));
         OnPropertyChanged(nameof(StringValue));
         OnPropertyChanged(nameof(IsModified));
+        OnPropertyChanged(nameof(WarningMessage));
+        OnPropertyChanged(nameof(HasWarning));
     }
 }

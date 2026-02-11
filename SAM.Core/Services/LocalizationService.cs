@@ -42,6 +42,7 @@ public class LocalizationService : ILocalizationService
             
             // Navigation
             ["Nav.Games"] = "Games",
+            ["Nav.Statistics"] = "Statistics",
             ["Nav.Diagnostics"] = "Diagnostics",
             ["Nav.About"] = "About",
             ["Nav.Settings"] = "Settings",
@@ -225,6 +226,7 @@ public class LocalizationService : ILocalizationService
             
             // Navigation
             ["Nav.Games"] = "Spiele",
+            ["Nav.Statistics"] = "Statistiken",
             ["Nav.Diagnostics"] = "Diagnose",
             ["Nav.About"] = "Info",
             ["Nav.Settings"] = "Einstellungen",

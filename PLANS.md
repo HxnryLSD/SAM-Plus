@@ -258,10 +258,11 @@
 - [ ] **Tastatur-Navigation** — Pfeiltasten + Space zum Togglen
 
 ### Statistiken-Seite
-- [ ] **Visuelle Graphen** — Achievements über Zeit (Line Chart)
-- [ ] **Vorher/Nachher-Vergleich** bei Stats-Änderungen
-- [ ] **Warnungen** — Bei verdächtigen Werten (z.B. negative Werte, Overflow)
-- [ ] **Reset-Button** pro Statistik (auf Standardwert zurücksetzen)
+- [x] **Visuelle Graphen** — Achievements über Zeit (Line Chart)
+- [x] **Vorher/Nachher-Vergleich** bei Stats-Änderungen
+- [x] **Warnungen** — Bei verdächtigen Werten (z.B. negative Werte, Overflow)
+- [x] **Account-Auswahl** — Nutzer kann oben rechts auswählen welchen account er sehen will, von dene die in der Userdata gespeichert sind, auch wenn sie auf diesen accounts nicht eingeloggt sind
+- [x] **Reset-Button** — pro Statistik (auf Standardwert zurücksetzen)
 
 ### Allgemein
 
@@ -276,7 +277,8 @@
 - [x] **Einstellungs-Sync** — Zwischen SAM.WinUI und SAM.Manager (Shared-Settings über SQLite)
 - [x] **Auto-Update** — Prüfung auf neue Version beim Start (GitHub Releases API)
 - [ ] **Tray-Icon** — Minimieren in System-Tray mit Schnellzugriff
-- [ ] **Multi-Monitor** — Fensterposition pro Monitor merken
+- [x] **Multi-Monitor** — Fensterposition pro Monitor merken.
+- [x] **Default-Window-Position** — Standard Fensterposition, wenn nicht gespeichert.
 - [ ] **Kommandozeilen-Argumente** — `--game <id>` für Direktstart
 
 #### Themes & Personalisierung

@@ -347,13 +347,7 @@ public sealed partial class AchievementManagerPage : Page
             }
             else
             {
-                // Show success notification
-                if (_notificationBar is not null)
-                {
-                    await _notificationBar.ShowSuccessAsync(
-                        $"{ViewModel.Achievements.Count} Achievements geladen",
-                        $"{ViewModel.UnlockedCount} freigeschaltet ({ViewModel.CompletionPercentage:F0}%)");
-                }
+                // Intentionally no success notification.
             }
         }
         catch (Exception ex)
@@ -488,14 +482,25 @@ public sealed partial class AchievementManagerPage : Page
 
     private void StatisticsButton_Click(object sender, RoutedEventArgs e)
     {
-        var param = new StatisticsPageParameter
+        try
         {
-            GameId = (ulong)ViewModel.GameId,
-            GameName = ViewModel.GameName,
-            Stats = ViewModel.Stats
-        };
+            Log.Debug("StatisticsButton_Click: Creating navigation parameter");
+            var param = new StatisticsPageParameter
+            {
+                GameId = (ulong)ViewModel.GameId,
+                GameName = ViewModel.GameName,
+                Stats = ViewModel.Stats
+            };
 
-        Frame.Navigate(typeof(StatisticsPage), param);
+            Log.Debug($"StatisticsButton_Click: Navigating with GameId={param.GameId}, GameName={param.GameName}, Stats count={param.Stats?.Count() ?? 0}");
+            Frame.Navigate(typeof(StatisticsPage), param);
+            Log.Debug("StatisticsButton_Click: Navigation completed");
+        }
+        catch (Exception ex)
+        {
+            Log.Exception(ex, "StatisticsButton_Click failed");
+            throw;
+        }
     }
 
     /// <summary>

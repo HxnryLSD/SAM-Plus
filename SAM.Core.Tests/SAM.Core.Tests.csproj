@@ -8,7 +8,11 @@
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
     <LangVersion>latest</LangVersion>
-    <UseWinUI>false</UseWinUI>
+    <UseWinUI>true</UseWinUI>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(IncludeManagerTests)' == 'true'">
+    <DefineConstants>$(DefineConstants);MANAGER_TESTS</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -27,6 +31,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SAM.Core\SAM.Core.csproj" />
+    <ProjectReference Include="..\SAM.Manager\SAM.Manager.csproj" Condition="'$(IncludeManagerTests)' == 'true'" />
   </ItemGroup>
 
 </Project>

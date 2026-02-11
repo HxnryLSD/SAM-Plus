@@ -139,7 +139,9 @@ Das Projekt enthält Unit Tests für SAM.Core in `SAM.Core.Tests/`.
 ### Tests ausführen
 
 ```powershell
-# Alle Tests in der Solution ausführen
+# Alle Tests in der Solution ausfuehren
+# Hinweis: Sobald ein Testprojekt WinUI referenziert (z.B. SAM.Manager),
+# muss zuerst mit Visual Studio MSBuild gebaut werden.
 dotnet test
 
 # Alle Tests ausführen (nur SAM.Core.Tests)
@@ -150,6 +152,28 @@ dotnet test SAM.Core.Tests\SAM.Core.Tests.csproj --logger "console;verbosity=det
 
 # Mit Code Coverage (Ergebnis in TestResults/)
 dotnet test SAM.Core.Tests\SAM.Core.Tests.csproj --collect:"XPlat Code Coverage"
+```
+
+### Tests mit WinUI-Abhaengigkeiten (z.B. SAM.Manager)
+
+Wenn Tests SAM.Manager referenzieren, darf **nicht** mit `dotnet build` gebaut werden.
+Stattdessen erst mit Visual Studio MSBuild bauen und danach Tests ohne Build ausfuehren:
+
+```powershell
+# 1) Build mit Visual Studio MSBuild
+& "$(& "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.Component.MSBuild -find MSBuild\**\Bin\MSBuild.exe)" SAM.Core.Tests\SAM.Core.Tests.csproj -p:Platform=x86 -p:Configuration=Debug -verbosity:minimal
+
+# 2) Tests ohne Build
+# Hinweis: Manager-Tests sind opt-in (siehe IncludeManagerTests)
+dotnet test SAM.Core.Tests\SAM.Core.Tests.csproj --no-build -p:IncludeManagerTests=true
+```
+
+**Opt-in fuer Manager-Tests:**
+Die Tests fuer SAM.Manager sind standardmaessig deaktiviert, damit `dotnet test`
+ohne WinUI-Build funktioniert. Aktiviere sie mit:
+
+```powershell
+dotnet test SAM.Core.Tests\SAM.Core.Tests.csproj -p:IncludeManagerTests=true
 ```
 
 ### Test-Struktur
@@ -214,6 +238,29 @@ Alle Projekte verwenden einen gemeinsamen Ausgabeordner (konfiguriert in `Direct
 ---
 
 ## Bekannte Probleme
+
+### NETSDK1004: Assets file not found
+
+**Symptom:** Build schlägt fehl mit:
+```
+error NETSDK1004: Assets file '...\obj\project.assets.json' not found. 
+Run a NuGet package restore to generate this file.
+```
+
+**Ursache:** Die `obj/` Ordner enthalten veraltete oder korrupte Cache-Dateien.
+
+**Lösung:**
+```powershell
+# 1. Alle obj/ Ordner löschen
+Get-ChildItem -Path . -Directory -Recurse -Filter "obj" | Remove-Item -Recurse -Force
+
+# 2. NuGet Packages wiederherstellen
+dotnet restore
+```
+
+Danach normal mit MSBuild bauen.
+
+---
 
 ### Debug-Build startet nicht (XamlParseException)
 

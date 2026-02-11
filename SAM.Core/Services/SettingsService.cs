@@ -124,6 +124,36 @@ public class SettingsService : ISettingsService
         set => _settings.EnableOfflineMode = value;
     }
 
+    public bool HasWindowPlacement
+    {
+        get => _settings.HasWindowPlacement;
+        set => _settings.HasWindowPlacement = value;
+    }
+
+    public int WindowX
+    {
+        get => _settings.WindowX;
+        set => _settings.WindowX = value;
+    }
+
+    public int WindowY
+    {
+        get => _settings.WindowY;
+        set => _settings.WindowY = value;
+    }
+
+    public int WindowWidth
+    {
+        get => _settings.WindowWidth;
+        set => _settings.WindowWidth = value;
+    }
+
+    public int WindowHeight
+    {
+        get => _settings.WindowHeight;
+        set => _settings.WindowHeight = value;
+    }
+
     public async Task LoadAsync(CancellationToken cancellationToken = default)
     {
         try
@@ -303,5 +333,10 @@ public class SettingsService : ISettingsService
         public string ImageCachePath { get; set; } = "";
         public long ImageCacheMaxSizeBytes { get; set; } = 100 * 1024 * 1024;
         public bool EnableOfflineMode { get; set; } = true;
+        public bool HasWindowPlacement { get; set; } = false;
+        public int WindowX { get; set; } = 0;
+        public int WindowY { get; set; } = 0;
+        public int WindowWidth { get; set; } = 0;
+        public int WindowHeight { get; set; } = 0;
     }
 }

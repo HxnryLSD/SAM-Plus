@@ -98,6 +98,31 @@ public interface ISettingsService
     bool EnableOfflineMode { get; set; }
 
     /// <summary>
+    /// Gets or sets whether a window placement has been saved.
+    /// </summary>
+    bool HasWindowPlacement { get; set; }
+
+    /// <summary>
+    /// Gets or sets the saved window X position.
+    /// </summary>
+    int WindowX { get; set; }
+
+    /// <summary>
+    /// Gets or sets the saved window Y position.
+    /// </summary>
+    int WindowY { get; set; }
+
+    /// <summary>
+    /// Gets or sets the saved window width.
+    /// </summary>
+    int WindowWidth { get; set; }
+
+    /// <summary>
+    /// Gets or sets the saved window height.
+    /// </summary>
+    int WindowHeight { get; set; }
+
+    /// <summary>
     /// Loads settings from storage.
     /// </summary>
     /// <param name="cancellationToken">Cancellation token.</param>

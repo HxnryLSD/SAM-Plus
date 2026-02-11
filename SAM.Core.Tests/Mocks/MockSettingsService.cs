@@ -43,6 +43,11 @@ public class MockSettingsService : ISettingsService
     public string ImageCachePath { get; set; } = Path.Combine(Path.GetTempPath(), "SAM.Tests", "ImageCache");
     public long ImageCacheMaxSizeBytes { get; set; } = 100 * 1024 * 1024;
     public bool EnableOfflineMode { get; set; } = true;
+    public bool HasWindowPlacement { get; set; }
+    public int WindowX { get; set; }
+    public int WindowY { get; set; }
+    public int WindowWidth { get; set; }
+    public int WindowHeight { get; set; }
 
     public bool LoadAsyncCalled { get; private set; }
     public bool SaveAsyncCalled { get; private set; }
@@ -76,5 +81,10 @@ public class MockSettingsService : ISettingsService
         AccentColor = "#FF0078D4";
         ImageCacheMaxSizeBytes = 100 * 1024 * 1024;
         EnableOfflineMode = true;
+        HasWindowPlacement = false;
+        WindowX = 0;
+        WindowY = 0;
+        WindowWidth = 0;
+        WindowHeight = 0;
     }
 }

@@ -21,6 +21,7 @@
  */
 
 using Microsoft.UI;
+using System;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
@@ -36,6 +37,7 @@ namespace SAM.Manager;
 /// </summary>
 public sealed partial class MainWindow : Window
 {
+    private readonly ISettingsService _settingsService;
     private AppWindow? _appWindow;
 
     public MainWindow()
@@ -45,6 +47,9 @@ public sealed partial class MainWindow : Window
         try
         {
             InitializeComponent();
+
+            _settingsService = App.GetService<ISettingsService>();
+            ArgumentNullException.ThrowIfNull(_settingsService, nameof(_settingsService));
             
             ConfigureWindow();
             ConfigureTitleBar();
@@ -54,6 +59,8 @@ public sealed partial class MainWindow : Window
             
             // Navigate to achievement manager page immediately
             NavigateToAchievementManager();
+
+            Closed += MainWindow_Closed;
             
             Log.MethodExit("success");
         }
@@ -76,17 +83,7 @@ public sealed partial class MainWindow : Window
             
             if (_appWindow is not null)
             {
-                // Set window size
-                _appWindow.Resize(new SizeInt32(1200, 800));
-                
-                // Center window on screen
-                var displayArea = DisplayArea.GetFromWindowId(windowId, DisplayAreaFallback.Primary);
-                if (displayArea is not null)
-                {
-                    var centerX = (displayArea.WorkArea.Width - 1200) / 2;
-                    var centerY = (displayArea.WorkArea.Height - 800) / 2;
-                    _appWindow.Move(new PointInt32(centerX, centerY));
-                }
+                ApplyWindowPlacement(_appWindow, windowId, 1200, 800);
                 
                 // Update title with game info
                 var title = "Steam Achievement Manager";
@@ -190,5 +187,74 @@ public sealed partial class MainWindow : Window
         }
         
         Log.MethodExit();
+    }
+
+    private void ApplyWindowPlacement(AppWindow appWindow, WindowId windowId, int defaultWidth, int defaultHeight)
+    {
+        var size = new SizeInt32(defaultWidth, defaultHeight);
+
+        if (_settingsService.HasWindowPlacement && _settingsService.WindowWidth > 0 && _settingsService.WindowHeight > 0)
+        {
+            size = new SizeInt32(_settingsService.WindowWidth, _settingsService.WindowHeight);
+        }
+
+        appWindow.Resize(size);
+
+        var targetX = _settingsService.WindowX;
+        var targetY = _settingsService.WindowY;
+        var displayArea = DisplayArea.GetFromPoint(new PointInt32(targetX, targetY), DisplayAreaFallback.Primary)
+            ?? DisplayArea.GetFromWindowId(windowId, DisplayAreaFallback.Primary);
+
+        if (displayArea is not null)
+        {
+            var work = displayArea.WorkArea;
+            if (size.Width > work.Width)
+            {
+                size.Width = work.Width;
+            }
+
+            if (size.Height > work.Height)
+            {
+                size.Height = work.Height;
+            }
+
+            appWindow.Resize(size);
+            var clampedX = Math.Clamp(targetX, work.X, work.X + work.Width - size.Width);
+            var clampedY = Math.Clamp(targetY, work.Y, work.Y + work.Height - size.Height);
+
+            if (!_settingsService.HasWindowPlacement)
+            {
+                clampedX = work.X + (work.Width - size.Width) / 2;
+                clampedY = work.Y + (work.Height - size.Height) / 2;
+            }
+
+            appWindow.Move(new PointInt32(clampedX, clampedY));
+        }
+    }
+
+    private async void MainWindow_Closed(object sender, WindowEventArgs args)
+    {
+        if (_appWindow is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var size = _appWindow.Size;
+            var position = _appWindow.Position;
+
+            _settingsService.WindowWidth = size.Width;
+            _settingsService.WindowHeight = size.Height;
+            _settingsService.WindowX = position.X;
+            _settingsService.WindowY = position.Y;
+            _settingsService.HasWindowPlacement = true;
+
+            await _settingsService.SaveAsync();
+        }
+        catch (Exception ex)
+        {
+            Log.Exception(ex, "Failed to save window placement");
+        }
     }
 }
